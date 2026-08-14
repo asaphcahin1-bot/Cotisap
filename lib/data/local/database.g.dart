@@ -80,6 +80,30 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _montantSolidariteObligatoireFcfaMeta =
+      const VerificationMeta('montantSolidariteObligatoireFcfa');
+  @override
+  late final GeneratedColumn<int> montantSolidariteObligatoireFcfa =
+      GeneratedColumn<int>(
+        'montant_solidarite_obligatoire_fcfa',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      );
+  static const VerificationMeta _montantAmendeSortieRougeFcfaMeta =
+      const VerificationMeta('montantAmendeSortieRougeFcfa');
+  @override
+  late final GeneratedColumn<int> montantAmendeSortieRougeFcfa =
+      GeneratedColumn<int>(
+        'montant_amende_sortie_rouge_fcfa',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(0),
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -101,6 +125,8 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
     paymentDayOfWeek,
     paymentDayOfMonth1,
     paymentDayOfMonth2,
+    montantSolidariteObligatoireFcfa,
+    montantAmendeSortieRougeFcfa,
     createdAt,
   ];
   @override
@@ -173,6 +199,24 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         ),
       );
     }
+    if (data.containsKey('montant_solidarite_obligatoire_fcfa')) {
+      context.handle(
+        _montantSolidariteObligatoireFcfaMeta,
+        montantSolidariteObligatoireFcfa.isAcceptableOrUnknown(
+          data['montant_solidarite_obligatoire_fcfa']!,
+          _montantSolidariteObligatoireFcfaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('montant_amende_sortie_rouge_fcfa')) {
+      context.handle(
+        _montantAmendeSortieRougeFcfaMeta,
+        montantAmendeSortieRougeFcfa.isAcceptableOrUnknown(
+          data['montant_amende_sortie_rouge_fcfa']!,
+          _montantAmendeSortieRougeFcfaMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -216,6 +260,14 @@ class $GroupsTable extends Groups with TableInfo<$GroupsTable, Group> {
         DriftSqlType.int,
         data['${effectivePrefix}payment_day_of_month2'],
       ),
+      montantSolidariteObligatoireFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_solidarite_obligatoire_fcfa'],
+      )!,
+      montantAmendeSortieRougeFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_amende_sortie_rouge_fcfa'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -251,6 +303,21 @@ class Group extends DataClass implements Insertable<Group> {
   final int? paymentDayOfWeek;
   final int? paymentDayOfMonth1;
   final int? paymentDayOfMonth2;
+
+  /// Montant obligatoire du fonds de solidarité, **par carnet**, dû à
+  /// chaque réunion — fixé une fois à la création du groupe, jamais
+  /// modifiable ensuite (voir DECISIONS.md, "Fonds de solidarité
+  /// obligatoire"). 0 = fonds non obligatoire pour ce groupe (les
+  /// contributions restent possibles mais aucun solde dû n'est suivi,
+  /// comportement historique).
+  final int montantSolidariteObligatoireFcfa;
+
+  /// Montant fixe ("amende") à payer, en plus des intérêts accumulés,
+  /// pour sortir un prêt "au rouge" et le reconduire pour une nouvelle
+  /// période normale — voir DECISIONS.md, "Dette de prêt au rouge".
+  /// Fixé une fois à la création du groupe, comme les autres montants
+  /// prédéfinis. 0 par défaut.
+  final int montantAmendeSortieRougeFcfa;
   final DateTime createdAt;
   const Group({
     required this.id,
@@ -260,6 +327,8 @@ class Group extends DataClass implements Insertable<Group> {
     this.paymentDayOfWeek,
     this.paymentDayOfMonth1,
     this.paymentDayOfMonth2,
+    required this.montantSolidariteObligatoireFcfa,
+    required this.montantAmendeSortieRougeFcfa,
     required this.createdAt,
   });
   @override
@@ -278,6 +347,12 @@ class Group extends DataClass implements Insertable<Group> {
     if (!nullToAbsent || paymentDayOfMonth2 != null) {
       map['payment_day_of_month2'] = Variable<int>(paymentDayOfMonth2);
     }
+    map['montant_solidarite_obligatoire_fcfa'] = Variable<int>(
+      montantSolidariteObligatoireFcfa,
+    );
+    map['montant_amende_sortie_rouge_fcfa'] = Variable<int>(
+      montantAmendeSortieRougeFcfa,
+    );
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -297,6 +372,8 @@ class Group extends DataClass implements Insertable<Group> {
       paymentDayOfMonth2: paymentDayOfMonth2 == null && nullToAbsent
           ? const Value.absent()
           : Value(paymentDayOfMonth2),
+      montantSolidariteObligatoireFcfa: Value(montantSolidariteObligatoireFcfa),
+      montantAmendeSortieRougeFcfa: Value(montantAmendeSortieRougeFcfa),
       createdAt: Value(createdAt),
     );
   }
@@ -316,6 +393,12 @@ class Group extends DataClass implements Insertable<Group> {
       paymentDayOfWeek: serializer.fromJson<int?>(json['paymentDayOfWeek']),
       paymentDayOfMonth1: serializer.fromJson<int?>(json['paymentDayOfMonth1']),
       paymentDayOfMonth2: serializer.fromJson<int?>(json['paymentDayOfMonth2']),
+      montantSolidariteObligatoireFcfa: serializer.fromJson<int>(
+        json['montantSolidariteObligatoireFcfa'],
+      ),
+      montantAmendeSortieRougeFcfa: serializer.fromJson<int>(
+        json['montantAmendeSortieRougeFcfa'],
+      ),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -330,6 +413,12 @@ class Group extends DataClass implements Insertable<Group> {
       'paymentDayOfWeek': serializer.toJson<int?>(paymentDayOfWeek),
       'paymentDayOfMonth1': serializer.toJson<int?>(paymentDayOfMonth1),
       'paymentDayOfMonth2': serializer.toJson<int?>(paymentDayOfMonth2),
+      'montantSolidariteObligatoireFcfa': serializer.toJson<int>(
+        montantSolidariteObligatoireFcfa,
+      ),
+      'montantAmendeSortieRougeFcfa': serializer.toJson<int>(
+        montantAmendeSortieRougeFcfa,
+      ),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -342,6 +431,8 @@ class Group extends DataClass implements Insertable<Group> {
     Value<int?> paymentDayOfWeek = const Value.absent(),
     Value<int?> paymentDayOfMonth1 = const Value.absent(),
     Value<int?> paymentDayOfMonth2 = const Value.absent(),
+    int? montantSolidariteObligatoireFcfa,
+    int? montantAmendeSortieRougeFcfa,
     DateTime? createdAt,
   }) => Group(
     id: id ?? this.id,
@@ -357,6 +448,11 @@ class Group extends DataClass implements Insertable<Group> {
     paymentDayOfMonth2: paymentDayOfMonth2.present
         ? paymentDayOfMonth2.value
         : this.paymentDayOfMonth2,
+    montantSolidariteObligatoireFcfa:
+        montantSolidariteObligatoireFcfa ??
+        this.montantSolidariteObligatoireFcfa,
+    montantAmendeSortieRougeFcfa:
+        montantAmendeSortieRougeFcfa ?? this.montantAmendeSortieRougeFcfa,
     createdAt: createdAt ?? this.createdAt,
   );
   Group copyWithCompanion(GroupsCompanion data) {
@@ -378,6 +474,13 @@ class Group extends DataClass implements Insertable<Group> {
       paymentDayOfMonth2: data.paymentDayOfMonth2.present
           ? data.paymentDayOfMonth2.value
           : this.paymentDayOfMonth2,
+      montantSolidariteObligatoireFcfa:
+          data.montantSolidariteObligatoireFcfa.present
+          ? data.montantSolidariteObligatoireFcfa.value
+          : this.montantSolidariteObligatoireFcfa,
+      montantAmendeSortieRougeFcfa: data.montantAmendeSortieRougeFcfa.present
+          ? data.montantAmendeSortieRougeFcfa.value
+          : this.montantAmendeSortieRougeFcfa,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -392,6 +495,12 @@ class Group extends DataClass implements Insertable<Group> {
           ..write('paymentDayOfWeek: $paymentDayOfWeek, ')
           ..write('paymentDayOfMonth1: $paymentDayOfMonth1, ')
           ..write('paymentDayOfMonth2: $paymentDayOfMonth2, ')
+          ..write(
+            'montantSolidariteObligatoireFcfa: $montantSolidariteObligatoireFcfa, ',
+          )
+          ..write(
+            'montantAmendeSortieRougeFcfa: $montantAmendeSortieRougeFcfa, ',
+          )
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -406,6 +515,8 @@ class Group extends DataClass implements Insertable<Group> {
     paymentDayOfWeek,
     paymentDayOfMonth1,
     paymentDayOfMonth2,
+    montantSolidariteObligatoireFcfa,
+    montantAmendeSortieRougeFcfa,
     createdAt,
   );
   @override
@@ -419,6 +530,10 @@ class Group extends DataClass implements Insertable<Group> {
           other.paymentDayOfWeek == this.paymentDayOfWeek &&
           other.paymentDayOfMonth1 == this.paymentDayOfMonth1 &&
           other.paymentDayOfMonth2 == this.paymentDayOfMonth2 &&
+          other.montantSolidariteObligatoireFcfa ==
+              this.montantSolidariteObligatoireFcfa &&
+          other.montantAmendeSortieRougeFcfa ==
+              this.montantAmendeSortieRougeFcfa &&
           other.createdAt == this.createdAt);
 }
 
@@ -430,6 +545,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
   final Value<int?> paymentDayOfWeek;
   final Value<int?> paymentDayOfMonth1;
   final Value<int?> paymentDayOfMonth2;
+  final Value<int> montantSolidariteObligatoireFcfa;
+  final Value<int> montantAmendeSortieRougeFcfa;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const GroupsCompanion({
@@ -440,6 +557,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.paymentDayOfWeek = const Value.absent(),
     this.paymentDayOfMonth1 = const Value.absent(),
     this.paymentDayOfMonth2 = const Value.absent(),
+    this.montantSolidariteObligatoireFcfa = const Value.absent(),
+    this.montantAmendeSortieRougeFcfa = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -451,6 +570,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     this.paymentDayOfWeek = const Value.absent(),
     this.paymentDayOfMonth1 = const Value.absent(),
     this.paymentDayOfMonth2 = const Value.absent(),
+    this.montantSolidariteObligatoireFcfa = const Value.absent(),
+    this.montantAmendeSortieRougeFcfa = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -463,6 +584,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Expression<int>? paymentDayOfWeek,
     Expression<int>? paymentDayOfMonth1,
     Expression<int>? paymentDayOfMonth2,
+    Expression<int>? montantSolidariteObligatoireFcfa,
+    Expression<int>? montantAmendeSortieRougeFcfa,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -477,6 +600,10 @@ class GroupsCompanion extends UpdateCompanion<Group> {
         'payment_day_of_month1': paymentDayOfMonth1,
       if (paymentDayOfMonth2 != null)
         'payment_day_of_month2': paymentDayOfMonth2,
+      if (montantSolidariteObligatoireFcfa != null)
+        'montant_solidarite_obligatoire_fcfa': montantSolidariteObligatoireFcfa,
+      if (montantAmendeSortieRougeFcfa != null)
+        'montant_amende_sortie_rouge_fcfa': montantAmendeSortieRougeFcfa,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -490,6 +617,8 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     Value<int?>? paymentDayOfWeek,
     Value<int?>? paymentDayOfMonth1,
     Value<int?>? paymentDayOfMonth2,
+    Value<int>? montantSolidariteObligatoireFcfa,
+    Value<int>? montantAmendeSortieRougeFcfa,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -501,6 +630,11 @@ class GroupsCompanion extends UpdateCompanion<Group> {
       paymentDayOfWeek: paymentDayOfWeek ?? this.paymentDayOfWeek,
       paymentDayOfMonth1: paymentDayOfMonth1 ?? this.paymentDayOfMonth1,
       paymentDayOfMonth2: paymentDayOfMonth2 ?? this.paymentDayOfMonth2,
+      montantSolidariteObligatoireFcfa:
+          montantSolidariteObligatoireFcfa ??
+          this.montantSolidariteObligatoireFcfa,
+      montantAmendeSortieRougeFcfa:
+          montantAmendeSortieRougeFcfa ?? this.montantAmendeSortieRougeFcfa,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -530,6 +664,16 @@ class GroupsCompanion extends UpdateCompanion<Group> {
     if (paymentDayOfMonth2.present) {
       map['payment_day_of_month2'] = Variable<int>(paymentDayOfMonth2.value);
     }
+    if (montantSolidariteObligatoireFcfa.present) {
+      map['montant_solidarite_obligatoire_fcfa'] = Variable<int>(
+        montantSolidariteObligatoireFcfa.value,
+      );
+    }
+    if (montantAmendeSortieRougeFcfa.present) {
+      map['montant_amende_sortie_rouge_fcfa'] = Variable<int>(
+        montantAmendeSortieRougeFcfa.value,
+      );
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -549,6 +693,12 @@ class GroupsCompanion extends UpdateCompanion<Group> {
           ..write('paymentDayOfWeek: $paymentDayOfWeek, ')
           ..write('paymentDayOfMonth1: $paymentDayOfMonth1, ')
           ..write('paymentDayOfMonth2: $paymentDayOfMonth2, ')
+          ..write(
+            'montantSolidariteObligatoireFcfa: $montantSolidariteObligatoireFcfa, ',
+          )
+          ..write(
+            'montantAmendeSortieRougeFcfa: $montantAmendeSortieRougeFcfa, ',
+          )
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1996,6 +2146,17 @@ class $CyclesTable extends Cycles with TableInfo<$CyclesTable, Cycle> {
     requiredDuringInsert: false,
     defaultValue: const Constant('en_cours'),
   );
+  static const VerificationMeta _inscriptionsFermeesAtMeta =
+      const VerificationMeta('inscriptionsFermeesAt');
+  @override
+  late final GeneratedColumn<DateTime> inscriptionsFermeesAt =
+      GeneratedColumn<DateTime>(
+        'inscriptions_fermees_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2008,6 +2169,7 @@ class $CyclesTable extends Cycles with TableInfo<$CyclesTable, Cycle> {
     lateFeeFcfa,
     loanDurationDays,
     status,
+    inscriptionsFermeesAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2103,6 +2265,15 @@ class $CyclesTable extends Cycles with TableInfo<$CyclesTable, Cycle> {
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('inscriptions_fermees_at')) {
+      context.handle(
+        _inscriptionsFermeesAtMeta,
+        inscriptionsFermeesAt.isAcceptableOrUnknown(
+          data['inscriptions_fermees_at']!,
+          _inscriptionsFermeesAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2152,6 +2323,10 @@ class $CyclesTable extends Cycles with TableInfo<$CyclesTable, Cycle> {
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      inscriptionsFermeesAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}inscriptions_fermees_at'],
+      ),
     );
   }
 
@@ -2187,6 +2362,13 @@ class Cycle extends DataClass implements Insertable<Cycle> {
 
   /// en_cours | cloture
   final String status;
+
+  /// Renseigné dès que la toute première journée de cotisation du cycle
+  /// est clôturée ([AppDatabase.cloturerJourneeCotisation]) — à partir de
+  /// là, plus aucun membre ne peut être ajouté à ce cycle (voir
+  /// DECISIONS.md, "Clôture de la journée de cotisation"). Null tant que
+  /// la liste des participants reste ouverte.
+  final DateTime? inscriptionsFermeesAt;
   const Cycle({
     required this.id,
     required this.groupId,
@@ -2198,6 +2380,7 @@ class Cycle extends DataClass implements Insertable<Cycle> {
     required this.lateFeeFcfa,
     required this.loanDurationDays,
     required this.status,
+    this.inscriptionsFermeesAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2214,6 +2397,11 @@ class Cycle extends DataClass implements Insertable<Cycle> {
     map['late_fee_fcfa'] = Variable<int>(lateFeeFcfa);
     map['loan_duration_days'] = Variable<int>(loanDurationDays);
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || inscriptionsFermeesAt != null) {
+      map['inscriptions_fermees_at'] = Variable<DateTime>(
+        inscriptionsFermeesAt,
+      );
+    }
     return map;
   }
 
@@ -2231,6 +2419,9 @@ class Cycle extends DataClass implements Insertable<Cycle> {
       lateFeeFcfa: Value(lateFeeFcfa),
       loanDurationDays: Value(loanDurationDays),
       status: Value(status),
+      inscriptionsFermeesAt: inscriptionsFermeesAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(inscriptionsFermeesAt),
     );
   }
 
@@ -2252,6 +2443,9 @@ class Cycle extends DataClass implements Insertable<Cycle> {
       lateFeeFcfa: serializer.fromJson<int>(json['lateFeeFcfa']),
       loanDurationDays: serializer.fromJson<int>(json['loanDurationDays']),
       status: serializer.fromJson<String>(json['status']),
+      inscriptionsFermeesAt: serializer.fromJson<DateTime?>(
+        json['inscriptionsFermeesAt'],
+      ),
     );
   }
   @override
@@ -2268,6 +2462,9 @@ class Cycle extends DataClass implements Insertable<Cycle> {
       'lateFeeFcfa': serializer.toJson<int>(lateFeeFcfa),
       'loanDurationDays': serializer.toJson<int>(loanDurationDays),
       'status': serializer.toJson<String>(status),
+      'inscriptionsFermeesAt': serializer.toJson<DateTime?>(
+        inscriptionsFermeesAt,
+      ),
     };
   }
 
@@ -2282,6 +2479,7 @@ class Cycle extends DataClass implements Insertable<Cycle> {
     int? lateFeeFcfa,
     int? loanDurationDays,
     String? status,
+    Value<DateTime?> inscriptionsFermeesAt = const Value.absent(),
   }) => Cycle(
     id: id ?? this.id,
     groupId: groupId ?? this.groupId,
@@ -2293,6 +2491,9 @@ class Cycle extends DataClass implements Insertable<Cycle> {
     lateFeeFcfa: lateFeeFcfa ?? this.lateFeeFcfa,
     loanDurationDays: loanDurationDays ?? this.loanDurationDays,
     status: status ?? this.status,
+    inscriptionsFermeesAt: inscriptionsFermeesAt.present
+        ? inscriptionsFermeesAt.value
+        : this.inscriptionsFermeesAt,
   );
   Cycle copyWithCompanion(CyclesCompanion data) {
     return Cycle(
@@ -2316,6 +2517,9 @@ class Cycle extends DataClass implements Insertable<Cycle> {
           ? data.loanDurationDays.value
           : this.loanDurationDays,
       status: data.status.present ? data.status.value : this.status,
+      inscriptionsFermeesAt: data.inscriptionsFermeesAt.present
+          ? data.inscriptionsFermeesAt.value
+          : this.inscriptionsFermeesAt,
     );
   }
 
@@ -2331,7 +2535,8 @@ class Cycle extends DataClass implements Insertable<Cycle> {
           ..write('interestRatePercent: $interestRatePercent, ')
           ..write('lateFeeFcfa: $lateFeeFcfa, ')
           ..write('loanDurationDays: $loanDurationDays, ')
-          ..write('status: $status')
+          ..write('status: $status, ')
+          ..write('inscriptionsFermeesAt: $inscriptionsFermeesAt')
           ..write(')'))
         .toString();
   }
@@ -2348,6 +2553,7 @@ class Cycle extends DataClass implements Insertable<Cycle> {
     lateFeeFcfa,
     loanDurationDays,
     status,
+    inscriptionsFermeesAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -2362,7 +2568,8 @@ class Cycle extends DataClass implements Insertable<Cycle> {
           other.interestRatePercent == this.interestRatePercent &&
           other.lateFeeFcfa == this.lateFeeFcfa &&
           other.loanDurationDays == this.loanDurationDays &&
-          other.status == this.status);
+          other.status == this.status &&
+          other.inscriptionsFermeesAt == this.inscriptionsFermeesAt);
 }
 
 class CyclesCompanion extends UpdateCompanion<Cycle> {
@@ -2376,6 +2583,7 @@ class CyclesCompanion extends UpdateCompanion<Cycle> {
   final Value<int> lateFeeFcfa;
   final Value<int> loanDurationDays;
   final Value<String> status;
+  final Value<DateTime?> inscriptionsFermeesAt;
   final Value<int> rowid;
   const CyclesCompanion({
     this.id = const Value.absent(),
@@ -2388,6 +2596,7 @@ class CyclesCompanion extends UpdateCompanion<Cycle> {
     this.lateFeeFcfa = const Value.absent(),
     this.loanDurationDays = const Value.absent(),
     this.status = const Value.absent(),
+    this.inscriptionsFermeesAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CyclesCompanion.insert({
@@ -2401,6 +2610,7 @@ class CyclesCompanion extends UpdateCompanion<Cycle> {
     this.lateFeeFcfa = const Value.absent(),
     this.loanDurationDays = const Value.absent(),
     this.status = const Value.absent(),
+    this.inscriptionsFermeesAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        groupId = Value(groupId),
@@ -2418,6 +2628,7 @@ class CyclesCompanion extends UpdateCompanion<Cycle> {
     Expression<int>? lateFeeFcfa,
     Expression<int>? loanDurationDays,
     Expression<String>? status,
+    Expression<DateTime>? inscriptionsFermeesAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2432,6 +2643,8 @@ class CyclesCompanion extends UpdateCompanion<Cycle> {
       if (lateFeeFcfa != null) 'late_fee_fcfa': lateFeeFcfa,
       if (loanDurationDays != null) 'loan_duration_days': loanDurationDays,
       if (status != null) 'status': status,
+      if (inscriptionsFermeesAt != null)
+        'inscriptions_fermees_at': inscriptionsFermeesAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2447,6 +2660,7 @@ class CyclesCompanion extends UpdateCompanion<Cycle> {
     Value<int>? lateFeeFcfa,
     Value<int>? loanDurationDays,
     Value<String>? status,
+    Value<DateTime?>? inscriptionsFermeesAt,
     Value<int>? rowid,
   }) {
     return CyclesCompanion(
@@ -2460,6 +2674,8 @@ class CyclesCompanion extends UpdateCompanion<Cycle> {
       lateFeeFcfa: lateFeeFcfa ?? this.lateFeeFcfa,
       loanDurationDays: loanDurationDays ?? this.loanDurationDays,
       status: status ?? this.status,
+      inscriptionsFermeesAt:
+          inscriptionsFermeesAt ?? this.inscriptionsFermeesAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2499,6 +2715,11 @@ class CyclesCompanion extends UpdateCompanion<Cycle> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (inscriptionsFermeesAt.present) {
+      map['inscriptions_fermees_at'] = Variable<DateTime>(
+        inscriptionsFermeesAt.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2518,6 +2739,7 @@ class CyclesCompanion extends UpdateCompanion<Cycle> {
           ..write('lateFeeFcfa: $lateFeeFcfa, ')
           ..write('loanDurationDays: $loanDurationDays, ')
           ..write('status: $status, ')
+          ..write('inscriptionsFermeesAt: $inscriptionsFermeesAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2628,6 +2850,18 @@ class $CotisationsTable extends Cotisations
       'REFERENCES members (id)',
     ),
   );
+  static const VerificationMeta _carnetNumeroMeta = const VerificationMeta(
+    'carnetNumero',
+  );
+  @override
+  late final GeneratedColumn<int> carnetNumero = GeneratedColumn<int>(
+    'carnet_numero',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   static const VerificationMeta _partsCountMeta = const VerificationMeta(
     'partsCount',
   );
@@ -2672,6 +2906,17 @@ class $CotisationsTable extends Cotisations
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _echeanceDateMeta = const VerificationMeta(
+    'echeanceDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> echeanceDate = GeneratedColumn<DateTime>(
+    'echeance_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     previousHash,
@@ -2682,10 +2927,12 @@ class $CotisationsTable extends Cotisations
     groupId,
     cycleId,
     memberId,
+    carnetNumero,
     partsCount,
     source,
     recordedByPhone,
     recordedAt,
+    echeanceDate,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2760,6 +3007,15 @@ class $CotisationsTable extends Cotisations
     } else if (isInserting) {
       context.missing(_memberIdMeta);
     }
+    if (data.containsKey('carnet_numero')) {
+      context.handle(
+        _carnetNumeroMeta,
+        carnetNumero.isAcceptableOrUnknown(
+          data['carnet_numero']!,
+          _carnetNumeroMeta,
+        ),
+      );
+    }
     if (data.containsKey('parts_count')) {
       context.handle(
         _partsCountMeta,
@@ -2789,6 +3045,15 @@ class $CotisationsTable extends Cotisations
       context.handle(
         _recordedAtMeta,
         recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
+      );
+    }
+    if (data.containsKey('echeance_date')) {
+      context.handle(
+        _echeanceDateMeta,
+        echeanceDate.isAcceptableOrUnknown(
+          data['echeance_date']!,
+          _echeanceDateMeta,
+        ),
       );
     }
     return context;
@@ -2832,6 +3097,10 @@ class $CotisationsTable extends Cotisations
         DriftSqlType.string,
         data['${effectivePrefix}member_id'],
       )!,
+      carnetNumero: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}carnet_numero'],
+      )!,
       partsCount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}parts_count'],
@@ -2848,6 +3117,10 @@ class $CotisationsTable extends Cotisations
         DriftSqlType.dateTime,
         data['${effectivePrefix}recorded_at'],
       )!,
+      echeanceDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}echeance_date'],
+      ),
     );
   }
 
@@ -2876,10 +3149,26 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
   final String groupId;
   final String cycleId;
   final String memberId;
+
+  /// 1 ou 2 — quel carnet du membre cette cotisation concerne. Toujours
+  /// 1 pour un import historique (skill historical-data-import ne
+  /// distingue pas les carnets).
+  final int carnetNumero;
   final int partsCount;
   final String source;
   final String recordedByPhone;
   final DateTime recordedAt;
+
+  /// Date de l'échéance (journée de cotisation) à laquelle cette
+  /// transaction se rattache — distincte de [recordedAt] (l'horodatage
+  /// réel/simulé de la saisie, qui peut différer si l'agent saisit une
+  /// journée en retard). Sert de base au plafond cumulatif journalier
+  /// ([AppDatabase.partsDejaAjouteesAujourdhui]) : additionner par
+  /// [recordedAt] mélangerait des échéances différentes saisies le même
+  /// jour réel, et raterait plusieurs transactions pour la même échéance
+  /// saisies à des instants réels différents. Nullable pour les lignes
+  /// importées avant l'ajout de cette colonne (voir DECISIONS.md).
+  final DateTime? echeanceDate;
   const Cotisation({
     this.previousHash,
     required this.hash,
@@ -2889,10 +3178,12 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
     required this.groupId,
     required this.cycleId,
     required this.memberId,
+    required this.carnetNumero,
     required this.partsCount,
     required this.source,
     required this.recordedByPhone,
     required this.recordedAt,
+    this.echeanceDate,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2907,10 +3198,14 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
     map['group_id'] = Variable<String>(groupId);
     map['cycle_id'] = Variable<String>(cycleId);
     map['member_id'] = Variable<String>(memberId);
+    map['carnet_numero'] = Variable<int>(carnetNumero);
     map['parts_count'] = Variable<int>(partsCount);
     map['source'] = Variable<String>(source);
     map['recorded_by_phone'] = Variable<String>(recordedByPhone);
     map['recorded_at'] = Variable<DateTime>(recordedAt);
+    if (!nullToAbsent || echeanceDate != null) {
+      map['echeance_date'] = Variable<DateTime>(echeanceDate);
+    }
     return map;
   }
 
@@ -2926,10 +3221,14 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
       groupId: Value(groupId),
       cycleId: Value(cycleId),
       memberId: Value(memberId),
+      carnetNumero: Value(carnetNumero),
       partsCount: Value(partsCount),
       source: Value(source),
       recordedByPhone: Value(recordedByPhone),
       recordedAt: Value(recordedAt),
+      echeanceDate: echeanceDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(echeanceDate),
     );
   }
 
@@ -2947,10 +3246,12 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
       groupId: serializer.fromJson<String>(json['groupId']),
       cycleId: serializer.fromJson<String>(json['cycleId']),
       memberId: serializer.fromJson<String>(json['memberId']),
+      carnetNumero: serializer.fromJson<int>(json['carnetNumero']),
       partsCount: serializer.fromJson<int>(json['partsCount']),
       source: serializer.fromJson<String>(json['source']),
       recordedByPhone: serializer.fromJson<String>(json['recordedByPhone']),
       recordedAt: serializer.fromJson<DateTime>(json['recordedAt']),
+      echeanceDate: serializer.fromJson<DateTime?>(json['echeanceDate']),
     );
   }
   @override
@@ -2965,10 +3266,12 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
       'groupId': serializer.toJson<String>(groupId),
       'cycleId': serializer.toJson<String>(cycleId),
       'memberId': serializer.toJson<String>(memberId),
+      'carnetNumero': serializer.toJson<int>(carnetNumero),
       'partsCount': serializer.toJson<int>(partsCount),
       'source': serializer.toJson<String>(source),
       'recordedByPhone': serializer.toJson<String>(recordedByPhone),
       'recordedAt': serializer.toJson<DateTime>(recordedAt),
+      'echeanceDate': serializer.toJson<DateTime?>(echeanceDate),
     };
   }
 
@@ -2981,10 +3284,12 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
     String? groupId,
     String? cycleId,
     String? memberId,
+    int? carnetNumero,
     int? partsCount,
     String? source,
     String? recordedByPhone,
     DateTime? recordedAt,
+    Value<DateTime?> echeanceDate = const Value.absent(),
   }) => Cotisation(
     previousHash: previousHash.present ? previousHash.value : this.previousHash,
     hash: hash ?? this.hash,
@@ -2994,10 +3299,12 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
     groupId: groupId ?? this.groupId,
     cycleId: cycleId ?? this.cycleId,
     memberId: memberId ?? this.memberId,
+    carnetNumero: carnetNumero ?? this.carnetNumero,
     partsCount: partsCount ?? this.partsCount,
     source: source ?? this.source,
     recordedByPhone: recordedByPhone ?? this.recordedByPhone,
     recordedAt: recordedAt ?? this.recordedAt,
+    echeanceDate: echeanceDate.present ? echeanceDate.value : this.echeanceDate,
   );
   Cotisation copyWithCompanion(CotisationsCompanion data) {
     return Cotisation(
@@ -3015,6 +3322,9 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
       groupId: data.groupId.present ? data.groupId.value : this.groupId,
       cycleId: data.cycleId.present ? data.cycleId.value : this.cycleId,
       memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      carnetNumero: data.carnetNumero.present
+          ? data.carnetNumero.value
+          : this.carnetNumero,
       partsCount: data.partsCount.present
           ? data.partsCount.value
           : this.partsCount,
@@ -3025,6 +3335,9 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
       recordedAt: data.recordedAt.present
           ? data.recordedAt.value
           : this.recordedAt,
+      echeanceDate: data.echeanceDate.present
+          ? data.echeanceDate.value
+          : this.echeanceDate,
     );
   }
 
@@ -3039,10 +3352,12 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
           ..write('groupId: $groupId, ')
           ..write('cycleId: $cycleId, ')
           ..write('memberId: $memberId, ')
+          ..write('carnetNumero: $carnetNumero, ')
           ..write('partsCount: $partsCount, ')
           ..write('source: $source, ')
           ..write('recordedByPhone: $recordedByPhone, ')
-          ..write('recordedAt: $recordedAt')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('echeanceDate: $echeanceDate')
           ..write(')'))
         .toString();
   }
@@ -3057,10 +3372,12 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
     groupId,
     cycleId,
     memberId,
+    carnetNumero,
     partsCount,
     source,
     recordedByPhone,
     recordedAt,
+    echeanceDate,
   );
   @override
   bool operator ==(Object other) =>
@@ -3074,10 +3391,12 @@ class Cotisation extends DataClass implements Insertable<Cotisation> {
           other.groupId == this.groupId &&
           other.cycleId == this.cycleId &&
           other.memberId == this.memberId &&
+          other.carnetNumero == this.carnetNumero &&
           other.partsCount == this.partsCount &&
           other.source == this.source &&
           other.recordedByPhone == this.recordedByPhone &&
-          other.recordedAt == this.recordedAt);
+          other.recordedAt == this.recordedAt &&
+          other.echeanceDate == this.echeanceDate);
 }
 
 class CotisationsCompanion extends UpdateCompanion<Cotisation> {
@@ -3089,10 +3408,12 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
   final Value<String> groupId;
   final Value<String> cycleId;
   final Value<String> memberId;
+  final Value<int> carnetNumero;
   final Value<int> partsCount;
   final Value<String> source;
   final Value<String> recordedByPhone;
   final Value<DateTime> recordedAt;
+  final Value<DateTime?> echeanceDate;
   final Value<int> rowid;
   const CotisationsCompanion({
     this.previousHash = const Value.absent(),
@@ -3103,10 +3424,12 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
     this.groupId = const Value.absent(),
     this.cycleId = const Value.absent(),
     this.memberId = const Value.absent(),
+    this.carnetNumero = const Value.absent(),
     this.partsCount = const Value.absent(),
     this.source = const Value.absent(),
     this.recordedByPhone = const Value.absent(),
     this.recordedAt = const Value.absent(),
+    this.echeanceDate = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CotisationsCompanion.insert({
@@ -3118,10 +3441,12 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
     required String groupId,
     required String cycleId,
     required String memberId,
+    this.carnetNumero = const Value.absent(),
     required int partsCount,
     this.source = const Value.absent(),
     required String recordedByPhone,
     this.recordedAt = const Value.absent(),
+    this.echeanceDate = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : hash = Value(hash),
        id = Value(id),
@@ -3139,10 +3464,12 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
     Expression<String>? groupId,
     Expression<String>? cycleId,
     Expression<String>? memberId,
+    Expression<int>? carnetNumero,
     Expression<int>? partsCount,
     Expression<String>? source,
     Expression<String>? recordedByPhone,
     Expression<DateTime>? recordedAt,
+    Expression<DateTime>? echeanceDate,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3154,10 +3481,12 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
       if (groupId != null) 'group_id': groupId,
       if (cycleId != null) 'cycle_id': cycleId,
       if (memberId != null) 'member_id': memberId,
+      if (carnetNumero != null) 'carnet_numero': carnetNumero,
       if (partsCount != null) 'parts_count': partsCount,
       if (source != null) 'source': source,
       if (recordedByPhone != null) 'recorded_by_phone': recordedByPhone,
       if (recordedAt != null) 'recorded_at': recordedAt,
+      if (echeanceDate != null) 'echeance_date': echeanceDate,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3171,10 +3500,12 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
     Value<String>? groupId,
     Value<String>? cycleId,
     Value<String>? memberId,
+    Value<int>? carnetNumero,
     Value<int>? partsCount,
     Value<String>? source,
     Value<String>? recordedByPhone,
     Value<DateTime>? recordedAt,
+    Value<DateTime?>? echeanceDate,
     Value<int>? rowid,
   }) {
     return CotisationsCompanion(
@@ -3186,10 +3517,12 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
       groupId: groupId ?? this.groupId,
       cycleId: cycleId ?? this.cycleId,
       memberId: memberId ?? this.memberId,
+      carnetNumero: carnetNumero ?? this.carnetNumero,
       partsCount: partsCount ?? this.partsCount,
       source: source ?? this.source,
       recordedByPhone: recordedByPhone ?? this.recordedByPhone,
       recordedAt: recordedAt ?? this.recordedAt,
+      echeanceDate: echeanceDate ?? this.echeanceDate,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3221,6 +3554,9 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
     if (memberId.present) {
       map['member_id'] = Variable<String>(memberId.value);
     }
+    if (carnetNumero.present) {
+      map['carnet_numero'] = Variable<int>(carnetNumero.value);
+    }
     if (partsCount.present) {
       map['parts_count'] = Variable<int>(partsCount.value);
     }
@@ -3232,6 +3568,9 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
     }
     if (recordedAt.present) {
       map['recorded_at'] = Variable<DateTime>(recordedAt.value);
+    }
+    if (echeanceDate.present) {
+      map['echeance_date'] = Variable<DateTime>(echeanceDate.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -3250,10 +3589,12 @@ class CotisationsCompanion extends UpdateCompanion<Cotisation> {
           ..write('groupId: $groupId, ')
           ..write('cycleId: $cycleId, ')
           ..write('memberId: $memberId, ')
+          ..write('carnetNumero: $carnetNumero, ')
           ..write('partsCount: $partsCount, ')
           ..write('source: $source, ')
           ..write('recordedByPhone: $recordedByPhone, ')
           ..write('recordedAt: $recordedAt, ')
+          ..write('echeanceDate: $echeanceDate, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3317,12 +3658,12 @@ class $CarnetsEngagesTable extends CarnetsEngages
       'REFERENCES members (id)',
     ),
   );
-  static const VerificationMeta _partsCountMeta = const VerificationMeta(
-    'partsCount',
+  static const VerificationMeta _nombreCarnetsMeta = const VerificationMeta(
+    'nombreCarnets',
   );
   @override
-  late final GeneratedColumn<int> partsCount = GeneratedColumn<int>(
-    'parts_count',
+  late final GeneratedColumn<int> nombreCarnets = GeneratedColumn<int>(
+    'nombre_carnets',
     aliasedName,
     false,
     type: DriftSqlType.int,
@@ -3345,7 +3686,7 @@ class $CarnetsEngagesTable extends CarnetsEngages
     groupId,
     cycleId,
     memberId,
-    partsCount,
+    nombreCarnets,
     lockedAt,
   ];
   @override
@@ -3389,13 +3730,16 @@ class $CarnetsEngagesTable extends CarnetsEngages
     } else if (isInserting) {
       context.missing(_memberIdMeta);
     }
-    if (data.containsKey('parts_count')) {
+    if (data.containsKey('nombre_carnets')) {
       context.handle(
-        _partsCountMeta,
-        partsCount.isAcceptableOrUnknown(data['parts_count']!, _partsCountMeta),
+        _nombreCarnetsMeta,
+        nombreCarnets.isAcceptableOrUnknown(
+          data['nombre_carnets']!,
+          _nombreCarnetsMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_partsCountMeta);
+      context.missing(_nombreCarnetsMeta);
     }
     if (data.containsKey('locked_at')) {
       context.handle(
@@ -3432,9 +3776,9 @@ class $CarnetsEngagesTable extends CarnetsEngages
         DriftSqlType.string,
         data['${effectivePrefix}member_id'],
       )!,
-      partsCount: attachedDatabase.typeMapping.read(
+      nombreCarnets: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
-        data['${effectivePrefix}parts_count'],
+        data['${effectivePrefix}nombre_carnets'],
       )!,
       lockedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -3454,14 +3798,14 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
   final String groupId;
   final String cycleId;
   final String memberId;
-  final int partsCount;
+  final int nombreCarnets;
   final DateTime? lockedAt;
   const CarnetsEngage({
     required this.id,
     required this.groupId,
     required this.cycleId,
     required this.memberId,
-    required this.partsCount,
+    required this.nombreCarnets,
     this.lockedAt,
   });
   @override
@@ -3471,7 +3815,7 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
     map['group_id'] = Variable<String>(groupId);
     map['cycle_id'] = Variable<String>(cycleId);
     map['member_id'] = Variable<String>(memberId);
-    map['parts_count'] = Variable<int>(partsCount);
+    map['nombre_carnets'] = Variable<int>(nombreCarnets);
     if (!nullToAbsent || lockedAt != null) {
       map['locked_at'] = Variable<DateTime>(lockedAt);
     }
@@ -3484,7 +3828,7 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
       groupId: Value(groupId),
       cycleId: Value(cycleId),
       memberId: Value(memberId),
-      partsCount: Value(partsCount),
+      nombreCarnets: Value(nombreCarnets),
       lockedAt: lockedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(lockedAt),
@@ -3501,7 +3845,7 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
       groupId: serializer.fromJson<String>(json['groupId']),
       cycleId: serializer.fromJson<String>(json['cycleId']),
       memberId: serializer.fromJson<String>(json['memberId']),
-      partsCount: serializer.fromJson<int>(json['partsCount']),
+      nombreCarnets: serializer.fromJson<int>(json['nombreCarnets']),
       lockedAt: serializer.fromJson<DateTime?>(json['lockedAt']),
     );
   }
@@ -3513,7 +3857,7 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
       'groupId': serializer.toJson<String>(groupId),
       'cycleId': serializer.toJson<String>(cycleId),
       'memberId': serializer.toJson<String>(memberId),
-      'partsCount': serializer.toJson<int>(partsCount),
+      'nombreCarnets': serializer.toJson<int>(nombreCarnets),
       'lockedAt': serializer.toJson<DateTime?>(lockedAt),
     };
   }
@@ -3523,14 +3867,14 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
     String? groupId,
     String? cycleId,
     String? memberId,
-    int? partsCount,
+    int? nombreCarnets,
     Value<DateTime?> lockedAt = const Value.absent(),
   }) => CarnetsEngage(
     id: id ?? this.id,
     groupId: groupId ?? this.groupId,
     cycleId: cycleId ?? this.cycleId,
     memberId: memberId ?? this.memberId,
-    partsCount: partsCount ?? this.partsCount,
+    nombreCarnets: nombreCarnets ?? this.nombreCarnets,
     lockedAt: lockedAt.present ? lockedAt.value : this.lockedAt,
   );
   CarnetsEngage copyWithCompanion(CarnetsEngagesCompanion data) {
@@ -3539,9 +3883,9 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
       groupId: data.groupId.present ? data.groupId.value : this.groupId,
       cycleId: data.cycleId.present ? data.cycleId.value : this.cycleId,
       memberId: data.memberId.present ? data.memberId.value : this.memberId,
-      partsCount: data.partsCount.present
-          ? data.partsCount.value
-          : this.partsCount,
+      nombreCarnets: data.nombreCarnets.present
+          ? data.nombreCarnets.value
+          : this.nombreCarnets,
       lockedAt: data.lockedAt.present ? data.lockedAt.value : this.lockedAt,
     );
   }
@@ -3553,7 +3897,7 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
           ..write('groupId: $groupId, ')
           ..write('cycleId: $cycleId, ')
           ..write('memberId: $memberId, ')
-          ..write('partsCount: $partsCount, ')
+          ..write('nombreCarnets: $nombreCarnets, ')
           ..write('lockedAt: $lockedAt')
           ..write(')'))
         .toString();
@@ -3561,7 +3905,7 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
 
   @override
   int get hashCode =>
-      Object.hash(id, groupId, cycleId, memberId, partsCount, lockedAt);
+      Object.hash(id, groupId, cycleId, memberId, nombreCarnets, lockedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3570,7 +3914,7 @@ class CarnetsEngage extends DataClass implements Insertable<CarnetsEngage> {
           other.groupId == this.groupId &&
           other.cycleId == this.cycleId &&
           other.memberId == this.memberId &&
-          other.partsCount == this.partsCount &&
+          other.nombreCarnets == this.nombreCarnets &&
           other.lockedAt == this.lockedAt);
 }
 
@@ -3579,7 +3923,7 @@ class CarnetsEngagesCompanion extends UpdateCompanion<CarnetsEngage> {
   final Value<String> groupId;
   final Value<String> cycleId;
   final Value<String> memberId;
-  final Value<int> partsCount;
+  final Value<int> nombreCarnets;
   final Value<DateTime?> lockedAt;
   final Value<int> rowid;
   const CarnetsEngagesCompanion({
@@ -3587,7 +3931,7 @@ class CarnetsEngagesCompanion extends UpdateCompanion<CarnetsEngage> {
     this.groupId = const Value.absent(),
     this.cycleId = const Value.absent(),
     this.memberId = const Value.absent(),
-    this.partsCount = const Value.absent(),
+    this.nombreCarnets = const Value.absent(),
     this.lockedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -3596,20 +3940,20 @@ class CarnetsEngagesCompanion extends UpdateCompanion<CarnetsEngage> {
     required String groupId,
     required String cycleId,
     required String memberId,
-    required int partsCount,
+    required int nombreCarnets,
     this.lockedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        groupId = Value(groupId),
        cycleId = Value(cycleId),
        memberId = Value(memberId),
-       partsCount = Value(partsCount);
+       nombreCarnets = Value(nombreCarnets);
   static Insertable<CarnetsEngage> custom({
     Expression<String>? id,
     Expression<String>? groupId,
     Expression<String>? cycleId,
     Expression<String>? memberId,
-    Expression<int>? partsCount,
+    Expression<int>? nombreCarnets,
     Expression<DateTime>? lockedAt,
     Expression<int>? rowid,
   }) {
@@ -3618,7 +3962,7 @@ class CarnetsEngagesCompanion extends UpdateCompanion<CarnetsEngage> {
       if (groupId != null) 'group_id': groupId,
       if (cycleId != null) 'cycle_id': cycleId,
       if (memberId != null) 'member_id': memberId,
-      if (partsCount != null) 'parts_count': partsCount,
+      if (nombreCarnets != null) 'nombre_carnets': nombreCarnets,
       if (lockedAt != null) 'locked_at': lockedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -3629,7 +3973,7 @@ class CarnetsEngagesCompanion extends UpdateCompanion<CarnetsEngage> {
     Value<String>? groupId,
     Value<String>? cycleId,
     Value<String>? memberId,
-    Value<int>? partsCount,
+    Value<int>? nombreCarnets,
     Value<DateTime?>? lockedAt,
     Value<int>? rowid,
   }) {
@@ -3638,7 +3982,7 @@ class CarnetsEngagesCompanion extends UpdateCompanion<CarnetsEngage> {
       groupId: groupId ?? this.groupId,
       cycleId: cycleId ?? this.cycleId,
       memberId: memberId ?? this.memberId,
-      partsCount: partsCount ?? this.partsCount,
+      nombreCarnets: nombreCarnets ?? this.nombreCarnets,
       lockedAt: lockedAt ?? this.lockedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -3659,8 +4003,8 @@ class CarnetsEngagesCompanion extends UpdateCompanion<CarnetsEngage> {
     if (memberId.present) {
       map['member_id'] = Variable<String>(memberId.value);
     }
-    if (partsCount.present) {
-      map['parts_count'] = Variable<int>(partsCount.value);
+    if (nombreCarnets.present) {
+      map['nombre_carnets'] = Variable<int>(nombreCarnets.value);
     }
     if (lockedAt.present) {
       map['locked_at'] = Variable<DateTime>(lockedAt.value);
@@ -3678,8 +4022,589 @@ class CarnetsEngagesCompanion extends UpdateCompanion<CarnetsEngage> {
           ..write('groupId: $groupId, ')
           ..write('cycleId: $cycleId, ')
           ..write('memberId: $memberId, ')
-          ..write('partsCount: $partsCount, ')
+          ..write('nombreCarnets: $nombreCarnets, ')
           ..write('lockedAt: $lockedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PretDemandesTable extends PretDemandes
+    with TableInfo<$PretDemandesTable, PretDemande> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PretDemandesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _previousHashMeta = const VerificationMeta(
+    'previousHash',
+  );
+  @override
+  late final GeneratedColumn<String> previousHash = GeneratedColumn<String>(
+    'previous_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hashMeta = const VerificationMeta('hash');
+  @override
+  late final GeneratedColumn<String> hash = GeneratedColumn<String>(
+    'hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES "groups" (id)',
+    ),
+  );
+  static const VerificationMeta _cycleIdMeta = const VerificationMeta(
+    'cycleId',
+  );
+  @override
+  late final GeneratedColumn<String> cycleId = GeneratedColumn<String>(
+    'cycle_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cycles (id)',
+    ),
+  );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<String> memberId = GeneratedColumn<String>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES members (id)',
+    ),
+  );
+  static const VerificationMeta _montantDemandeFcfaMeta =
+      const VerificationMeta('montantDemandeFcfa');
+  @override
+  late final GeneratedColumn<int> montantDemandeFcfa = GeneratedColumn<int>(
+    'montant_demande_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordedByPhoneMeta = const VerificationMeta(
+    'recordedByPhone',
+  );
+  @override
+  late final GeneratedColumn<String> recordedByPhone = GeneratedColumn<String>(
+    'recorded_by_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    montantDemandeFcfa,
+    recordedByPhone,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pret_demandes';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PretDemande> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('previous_hash')) {
+      context.handle(
+        _previousHashMeta,
+        previousHash.isAcceptableOrUnknown(
+          data['previous_hash']!,
+          _previousHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hash')) {
+      context.handle(
+        _hashMeta,
+        hash.isAcceptableOrUnknown(data['hash']!, _hashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hashMeta);
+    }
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('cycle_id')) {
+      context.handle(
+        _cycleIdMeta,
+        cycleId.isAcceptableOrUnknown(data['cycle_id']!, _cycleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cycleIdMeta);
+    }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('montant_demande_fcfa')) {
+      context.handle(
+        _montantDemandeFcfaMeta,
+        montantDemandeFcfa.isAcceptableOrUnknown(
+          data['montant_demande_fcfa']!,
+          _montantDemandeFcfaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montantDemandeFcfaMeta);
+    }
+    if (data.containsKey('recorded_by_phone')) {
+      context.handle(
+        _recordedByPhoneMeta,
+        recordedByPhone.isAcceptableOrUnknown(
+          data['recorded_by_phone']!,
+          _recordedByPhoneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recordedByPhoneMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PretDemande map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PretDemande(
+      previousHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_hash'],
+      ),
+      hash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hash'],
+      )!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      cycleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_id'],
+      )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}member_id'],
+      )!,
+      montantDemandeFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_demande_fcfa'],
+      )!,
+      recordedByPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recorded_by_phone'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PretDemandesTable createAlias(String alias) {
+    return $PretDemandesTable(attachedDatabase, alias);
+  }
+}
+
+class PretDemande extends DataClass implements Insertable<PretDemande> {
+  final String? previousHash;
+  final String hash;
+  final String id;
+  final String groupId;
+  final String cycleId;
+  final String memberId;
+  final int montantDemandeFcfa;
+  final String recordedByPhone;
+  final DateTime createdAt;
+  const PretDemande({
+    this.previousHash,
+    required this.hash,
+    required this.id,
+    required this.groupId,
+    required this.cycleId,
+    required this.memberId,
+    required this.montantDemandeFcfa,
+    required this.recordedByPhone,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || previousHash != null) {
+      map['previous_hash'] = Variable<String>(previousHash);
+    }
+    map['hash'] = Variable<String>(hash);
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['cycle_id'] = Variable<String>(cycleId);
+    map['member_id'] = Variable<String>(memberId);
+    map['montant_demande_fcfa'] = Variable<int>(montantDemandeFcfa);
+    map['recorded_by_phone'] = Variable<String>(recordedByPhone);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  PretDemandesCompanion toCompanion(bool nullToAbsent) {
+    return PretDemandesCompanion(
+      previousHash: previousHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousHash),
+      hash: Value(hash),
+      id: Value(id),
+      groupId: Value(groupId),
+      cycleId: Value(cycleId),
+      memberId: Value(memberId),
+      montantDemandeFcfa: Value(montantDemandeFcfa),
+      recordedByPhone: Value(recordedByPhone),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory PretDemande.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PretDemande(
+      previousHash: serializer.fromJson<String?>(json['previousHash']),
+      hash: serializer.fromJson<String>(json['hash']),
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      cycleId: serializer.fromJson<String>(json['cycleId']),
+      memberId: serializer.fromJson<String>(json['memberId']),
+      montantDemandeFcfa: serializer.fromJson<int>(json['montantDemandeFcfa']),
+      recordedByPhone: serializer.fromJson<String>(json['recordedByPhone']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'previousHash': serializer.toJson<String?>(previousHash),
+      'hash': serializer.toJson<String>(hash),
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'cycleId': serializer.toJson<String>(cycleId),
+      'memberId': serializer.toJson<String>(memberId),
+      'montantDemandeFcfa': serializer.toJson<int>(montantDemandeFcfa),
+      'recordedByPhone': serializer.toJson<String>(recordedByPhone),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  PretDemande copyWith({
+    Value<String?> previousHash = const Value.absent(),
+    String? hash,
+    String? id,
+    String? groupId,
+    String? cycleId,
+    String? memberId,
+    int? montantDemandeFcfa,
+    String? recordedByPhone,
+    DateTime? createdAt,
+  }) => PretDemande(
+    previousHash: previousHash.present ? previousHash.value : this.previousHash,
+    hash: hash ?? this.hash,
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    cycleId: cycleId ?? this.cycleId,
+    memberId: memberId ?? this.memberId,
+    montantDemandeFcfa: montantDemandeFcfa ?? this.montantDemandeFcfa,
+    recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  PretDemande copyWithCompanion(PretDemandesCompanion data) {
+    return PretDemande(
+      previousHash: data.previousHash.present
+          ? data.previousHash.value
+          : this.previousHash,
+      hash: data.hash.present ? data.hash.value : this.hash,
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      cycleId: data.cycleId.present ? data.cycleId.value : this.cycleId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      montantDemandeFcfa: data.montantDemandeFcfa.present
+          ? data.montantDemandeFcfa.value
+          : this.montantDemandeFcfa,
+      recordedByPhone: data.recordedByPhone.present
+          ? data.recordedByPhone.value
+          : this.recordedByPhone,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PretDemande(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('montantDemandeFcfa: $montantDemandeFcfa, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    montantDemandeFcfa,
+    recordedByPhone,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PretDemande &&
+          other.previousHash == this.previousHash &&
+          other.hash == this.hash &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.cycleId == this.cycleId &&
+          other.memberId == this.memberId &&
+          other.montantDemandeFcfa == this.montantDemandeFcfa &&
+          other.recordedByPhone == this.recordedByPhone &&
+          other.createdAt == this.createdAt);
+}
+
+class PretDemandesCompanion extends UpdateCompanion<PretDemande> {
+  final Value<String?> previousHash;
+  final Value<String> hash;
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> cycleId;
+  final Value<String> memberId;
+  final Value<int> montantDemandeFcfa;
+  final Value<String> recordedByPhone;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const PretDemandesCompanion({
+    this.previousHash = const Value.absent(),
+    this.hash = const Value.absent(),
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.cycleId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.montantDemandeFcfa = const Value.absent(),
+    this.recordedByPhone = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PretDemandesCompanion.insert({
+    this.previousHash = const Value.absent(),
+    required String hash,
+    required String id,
+    required String groupId,
+    required String cycleId,
+    required String memberId,
+    required int montantDemandeFcfa,
+    required String recordedByPhone,
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : hash = Value(hash),
+       id = Value(id),
+       groupId = Value(groupId),
+       cycleId = Value(cycleId),
+       memberId = Value(memberId),
+       montantDemandeFcfa = Value(montantDemandeFcfa),
+       recordedByPhone = Value(recordedByPhone);
+  static Insertable<PretDemande> custom({
+    Expression<String>? previousHash,
+    Expression<String>? hash,
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? cycleId,
+    Expression<String>? memberId,
+    Expression<int>? montantDemandeFcfa,
+    Expression<String>? recordedByPhone,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (previousHash != null) 'previous_hash': previousHash,
+      if (hash != null) 'hash': hash,
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (cycleId != null) 'cycle_id': cycleId,
+      if (memberId != null) 'member_id': memberId,
+      if (montantDemandeFcfa != null)
+        'montant_demande_fcfa': montantDemandeFcfa,
+      if (recordedByPhone != null) 'recorded_by_phone': recordedByPhone,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PretDemandesCompanion copyWith({
+    Value<String?>? previousHash,
+    Value<String>? hash,
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? cycleId,
+    Value<String>? memberId,
+    Value<int>? montantDemandeFcfa,
+    Value<String>? recordedByPhone,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return PretDemandesCompanion(
+      previousHash: previousHash ?? this.previousHash,
+      hash: hash ?? this.hash,
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      cycleId: cycleId ?? this.cycleId,
+      memberId: memberId ?? this.memberId,
+      montantDemandeFcfa: montantDemandeFcfa ?? this.montantDemandeFcfa,
+      recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (previousHash.present) {
+      map['previous_hash'] = Variable<String>(previousHash.value);
+    }
+    if (hash.present) {
+      map['hash'] = Variable<String>(hash.value);
+    }
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (cycleId.present) {
+      map['cycle_id'] = Variable<String>(cycleId.value);
+    }
+    if (memberId.present) {
+      map['member_id'] = Variable<String>(memberId.value);
+    }
+    if (montantDemandeFcfa.present) {
+      map['montant_demande_fcfa'] = Variable<int>(montantDemandeFcfa.value);
+    }
+    if (recordedByPhone.present) {
+      map['recorded_by_phone'] = Variable<String>(recordedByPhone.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PretDemandesCompanion(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('montantDemandeFcfa: $montantDemandeFcfa, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3856,6 +4781,49 @@ class $PretsTable extends Prets with TableInfo<$PretsTable, Pret> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _renouvelePretIdMeta = const VerificationMeta(
+    'renouvelePretId',
+  );
+  @override
+  late final GeneratedColumn<String> renouvelePretId = GeneratedColumn<String>(
+    'renouvele_pret_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES prets (id)',
+    ),
+  );
+  static const VerificationMeta _estAuRougeDesLeDepartMeta =
+      const VerificationMeta('estAuRougeDesLeDepart');
+  @override
+  late final GeneratedColumn<bool> estAuRougeDesLeDepart =
+      GeneratedColumn<bool>(
+        'est_au_rouge_des_le_depart',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("est_au_rouge_des_le_depart" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
+  static const VerificationMeta _demandeIdMeta = const VerificationMeta(
+    'demandeId',
+  );
+  @override
+  late final GeneratedColumn<String> demandeId = GeneratedColumn<String>(
+    'demande_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES pret_demandes (id)',
+    ),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     previousHash,
@@ -3872,6 +4840,9 @@ class $PretsTable extends Prets with TableInfo<$PretsTable, Pret> {
     initiatedByPhone,
     confirmationCode,
     createdAt,
+    renouvelePretId,
+    estAuRougeDesLeDepart,
+    demandeId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4000,6 +4971,30 @@ class $PretsTable extends Prets with TableInfo<$PretsTable, Pret> {
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('renouvele_pret_id')) {
+      context.handle(
+        _renouvelePretIdMeta,
+        renouvelePretId.isAcceptableOrUnknown(
+          data['renouvele_pret_id']!,
+          _renouvelePretIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('est_au_rouge_des_le_depart')) {
+      context.handle(
+        _estAuRougeDesLeDepartMeta,
+        estAuRougeDesLeDepart.isAcceptableOrUnknown(
+          data['est_au_rouge_des_le_depart']!,
+          _estAuRougeDesLeDepartMeta,
+        ),
+      );
+    }
+    if (data.containsKey('demande_id')) {
+      context.handle(
+        _demandeIdMeta,
+        demandeId.isAcceptableOrUnknown(data['demande_id']!, _demandeIdMeta),
+      );
+    }
     return context;
   }
 
@@ -4065,6 +5060,18 @@ class $PretsTable extends Prets with TableInfo<$PretsTable, Pret> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      renouvelePretId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}renouvele_pret_id'],
+      ),
+      estAuRougeDesLeDepart: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}est_au_rouge_des_le_depart'],
+      )!,
+      demandeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}demande_id'],
+      ),
     );
   }
 
@@ -4113,6 +5120,32 @@ class Pret extends DataClass implements Insertable<Pret> {
   /// (voir [PretConfirmations]).
   final String? confirmationCode;
   final DateTime createdAt;
+
+  /// Renseigné quand ce prêt est le successeur d'un autre — soit une
+  /// sortie du rouge dans le même cycle (voir
+  /// [AppDatabase.sortirDuRouge]), soit une reconduction dans le cycle
+  /// suivant (voir DECISIONS.md, "Reconduction d'un prêt non soldé au
+  /// cycle suivant"). Le prêt d'origine n'est jamais modifié ni
+  /// supprimé — juste "remplacé" par celui-ci pour la suite (voir
+  /// [AppDatabase.pretsNonSoldesDuCycle], qui exclut désormais un prêt
+  /// ayant un successeur connu).
+  final String? renouvelePretId;
+
+  /// Vrai seulement pour un prêt reconduit au cycle suivant (voir
+  /// [renouvelePretId]) : entre directement "au rouge" dès sa création,
+  /// sans première période de grâce (voir DECISIONS.md, "Dette de prêt
+  /// au rouge" — même mécanisme, le passage de cycle est juste un des
+  /// déclencheurs possibles). Faux pour un prêt normal ou une sortie du
+  /// rouge dans le même cycle (qui repart, elle, avec une période
+  /// normale fraîche).
+  final bool estAuRougeDesLeDepart;
+
+  /// Renseigné quand ce prêt provient du rationnement collectif des
+  /// crédits (voir DECISIONS.md, "Rationnement collectif des crédits")
+  /// — relie le prêt accordé (intégral ou réduit) à la [PretDemandes]
+  /// dont il découle. Null pour un prêt créé directement via "Nouveau
+  /// prêt" (le chemin simple, sans négociation, reste inchangé).
+  final String? demandeId;
   const Pret({
     this.previousHash,
     required this.hash,
@@ -4128,6 +5161,9 @@ class Pret extends DataClass implements Insertable<Pret> {
     required this.initiatedByPhone,
     this.confirmationCode,
     required this.createdAt,
+    this.renouvelePretId,
+    required this.estAuRougeDesLeDepart,
+    this.demandeId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4152,6 +5188,13 @@ class Pret extends DataClass implements Insertable<Pret> {
       map['confirmation_code'] = Variable<String>(confirmationCode);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || renouvelePretId != null) {
+      map['renouvele_pret_id'] = Variable<String>(renouvelePretId);
+    }
+    map['est_au_rouge_des_le_depart'] = Variable<bool>(estAuRougeDesLeDepart);
+    if (!nullToAbsent || demandeId != null) {
+      map['demande_id'] = Variable<String>(demandeId);
+    }
     return map;
   }
 
@@ -4177,6 +5220,13 @@ class Pret extends DataClass implements Insertable<Pret> {
           ? const Value.absent()
           : Value(confirmationCode),
       createdAt: Value(createdAt),
+      renouvelePretId: renouvelePretId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(renouvelePretId),
+      estAuRougeDesLeDepart: Value(estAuRougeDesLeDepart),
+      demandeId: demandeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(demandeId),
     );
   }
 
@@ -4202,6 +5252,11 @@ class Pret extends DataClass implements Insertable<Pret> {
       initiatedByPhone: serializer.fromJson<String>(json['initiatedByPhone']),
       confirmationCode: serializer.fromJson<String?>(json['confirmationCode']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      renouvelePretId: serializer.fromJson<String?>(json['renouvelePretId']),
+      estAuRougeDesLeDepart: serializer.fromJson<bool>(
+        json['estAuRougeDesLeDepart'],
+      ),
+      demandeId: serializer.fromJson<String?>(json['demandeId']),
     );
   }
   @override
@@ -4222,6 +5277,9 @@ class Pret extends DataClass implements Insertable<Pret> {
       'initiatedByPhone': serializer.toJson<String>(initiatedByPhone),
       'confirmationCode': serializer.toJson<String?>(confirmationCode),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'renouvelePretId': serializer.toJson<String?>(renouvelePretId),
+      'estAuRougeDesLeDepart': serializer.toJson<bool>(estAuRougeDesLeDepart),
+      'demandeId': serializer.toJson<String?>(demandeId),
     };
   }
 
@@ -4240,6 +5298,9 @@ class Pret extends DataClass implements Insertable<Pret> {
     String? initiatedByPhone,
     Value<String?> confirmationCode = const Value.absent(),
     DateTime? createdAt,
+    Value<String?> renouvelePretId = const Value.absent(),
+    bool? estAuRougeDesLeDepart,
+    Value<String?> demandeId = const Value.absent(),
   }) => Pret(
     previousHash: previousHash.present ? previousHash.value : this.previousHash,
     hash: hash ?? this.hash,
@@ -4257,6 +5318,11 @@ class Pret extends DataClass implements Insertable<Pret> {
         ? confirmationCode.value
         : this.confirmationCode,
     createdAt: createdAt ?? this.createdAt,
+    renouvelePretId: renouvelePretId.present
+        ? renouvelePretId.value
+        : this.renouvelePretId,
+    estAuRougeDesLeDepart: estAuRougeDesLeDepart ?? this.estAuRougeDesLeDepart,
+    demandeId: demandeId.present ? demandeId.value : this.demandeId,
   );
   Pret copyWithCompanion(PretsCompanion data) {
     return Pret(
@@ -4290,6 +5356,13 @@ class Pret extends DataClass implements Insertable<Pret> {
           ? data.confirmationCode.value
           : this.confirmationCode,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      renouvelePretId: data.renouvelePretId.present
+          ? data.renouvelePretId.value
+          : this.renouvelePretId,
+      estAuRougeDesLeDepart: data.estAuRougeDesLeDepart.present
+          ? data.estAuRougeDesLeDepart.value
+          : this.estAuRougeDesLeDepart,
+      demandeId: data.demandeId.present ? data.demandeId.value : this.demandeId,
     );
   }
 
@@ -4309,7 +5382,10 @@ class Pret extends DataClass implements Insertable<Pret> {
           ..write('dureeJours: $dureeJours, ')
           ..write('initiatedByPhone: $initiatedByPhone, ')
           ..write('confirmationCode: $confirmationCode, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('renouvelePretId: $renouvelePretId, ')
+          ..write('estAuRougeDesLeDepart: $estAuRougeDesLeDepart, ')
+          ..write('demandeId: $demandeId')
           ..write(')'))
         .toString();
   }
@@ -4330,6 +5406,9 @@ class Pret extends DataClass implements Insertable<Pret> {
     initiatedByPhone,
     confirmationCode,
     createdAt,
+    renouvelePretId,
+    estAuRougeDesLeDepart,
+    demandeId,
   );
   @override
   bool operator ==(Object other) =>
@@ -4348,7 +5427,10 @@ class Pret extends DataClass implements Insertable<Pret> {
           other.dureeJours == this.dureeJours &&
           other.initiatedByPhone == this.initiatedByPhone &&
           other.confirmationCode == this.confirmationCode &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.renouvelePretId == this.renouvelePretId &&
+          other.estAuRougeDesLeDepart == this.estAuRougeDesLeDepart &&
+          other.demandeId == this.demandeId);
 }
 
 class PretsCompanion extends UpdateCompanion<Pret> {
@@ -4366,6 +5448,9 @@ class PretsCompanion extends UpdateCompanion<Pret> {
   final Value<String> initiatedByPhone;
   final Value<String?> confirmationCode;
   final Value<DateTime> createdAt;
+  final Value<String?> renouvelePretId;
+  final Value<bool> estAuRougeDesLeDepart;
+  final Value<String?> demandeId;
   final Value<int> rowid;
   const PretsCompanion({
     this.previousHash = const Value.absent(),
@@ -4382,6 +5467,9 @@ class PretsCompanion extends UpdateCompanion<Pret> {
     this.initiatedByPhone = const Value.absent(),
     this.confirmationCode = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.renouvelePretId = const Value.absent(),
+    this.estAuRougeDesLeDepart = const Value.absent(),
+    this.demandeId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PretsCompanion.insert({
@@ -4399,6 +5487,9 @@ class PretsCompanion extends UpdateCompanion<Pret> {
     required String initiatedByPhone,
     this.confirmationCode = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.renouvelePretId = const Value.absent(),
+    this.estAuRougeDesLeDepart = const Value.absent(),
+    this.demandeId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : hash = Value(hash),
        id = Value(id),
@@ -4423,6 +5514,9 @@ class PretsCompanion extends UpdateCompanion<Pret> {
     Expression<String>? initiatedByPhone,
     Expression<String>? confirmationCode,
     Expression<DateTime>? createdAt,
+    Expression<String>? renouvelePretId,
+    Expression<bool>? estAuRougeDesLeDepart,
+    Expression<String>? demandeId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4441,6 +5535,10 @@ class PretsCompanion extends UpdateCompanion<Pret> {
       if (initiatedByPhone != null) 'initiated_by_phone': initiatedByPhone,
       if (confirmationCode != null) 'confirmation_code': confirmationCode,
       if (createdAt != null) 'created_at': createdAt,
+      if (renouvelePretId != null) 'renouvele_pret_id': renouvelePretId,
+      if (estAuRougeDesLeDepart != null)
+        'est_au_rouge_des_le_depart': estAuRougeDesLeDepart,
+      if (demandeId != null) 'demande_id': demandeId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4460,6 +5558,9 @@ class PretsCompanion extends UpdateCompanion<Pret> {
     Value<String>? initiatedByPhone,
     Value<String?>? confirmationCode,
     Value<DateTime>? createdAt,
+    Value<String?>? renouvelePretId,
+    Value<bool>? estAuRougeDesLeDepart,
+    Value<String?>? demandeId,
     Value<int>? rowid,
   }) {
     return PretsCompanion(
@@ -4477,6 +5578,10 @@ class PretsCompanion extends UpdateCompanion<Pret> {
       initiatedByPhone: initiatedByPhone ?? this.initiatedByPhone,
       confirmationCode: confirmationCode ?? this.confirmationCode,
       createdAt: createdAt ?? this.createdAt,
+      renouvelePretId: renouvelePretId ?? this.renouvelePretId,
+      estAuRougeDesLeDepart:
+          estAuRougeDesLeDepart ?? this.estAuRougeDesLeDepart,
+      demandeId: demandeId ?? this.demandeId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4528,6 +5633,17 @@ class PretsCompanion extends UpdateCompanion<Pret> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (renouvelePretId.present) {
+      map['renouvele_pret_id'] = Variable<String>(renouvelePretId.value);
+    }
+    if (estAuRougeDesLeDepart.present) {
+      map['est_au_rouge_des_le_depart'] = Variable<bool>(
+        estAuRougeDesLeDepart.value,
+      );
+    }
+    if (demandeId.present) {
+      map['demande_id'] = Variable<String>(demandeId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4551,6 +5667,9 @@ class PretsCompanion extends UpdateCompanion<Pret> {
           ..write('initiatedByPhone: $initiatedByPhone, ')
           ..write('confirmationCode: $confirmationCode, ')
           ..write('createdAt: $createdAt, ')
+          ..write('renouvelePretId: $renouvelePretId, ')
+          ..write('estAuRougeDesLeDepart: $estAuRougeDesLeDepart, ')
+          ..write('demandeId: $demandeId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6257,6 +7376,433 @@ class PretAnnulationsCompanion extends UpdateCompanion<PretAnnulation> {
   }
 }
 
+class $PretDemandeRefusTable extends PretDemandeRefus
+    with TableInfo<$PretDemandeRefusTable, PretDemandeRefusData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PretDemandeRefusTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _previousHashMeta = const VerificationMeta(
+    'previousHash',
+  );
+  @override
+  late final GeneratedColumn<String> previousHash = GeneratedColumn<String>(
+    'previous_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hashMeta = const VerificationMeta('hash');
+  @override
+  late final GeneratedColumn<String> hash = GeneratedColumn<String>(
+    'hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _demandeIdMeta = const VerificationMeta(
+    'demandeId',
+  );
+  @override
+  late final GeneratedColumn<String> demandeId = GeneratedColumn<String>(
+    'demande_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES pret_demandes (id)',
+    ),
+  );
+  static const VerificationMeta _recordedByPhoneMeta = const VerificationMeta(
+    'recordedByPhone',
+  );
+  @override
+  late final GeneratedColumn<String> recordedByPhone = GeneratedColumn<String>(
+    'recorded_by_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _refusedAtMeta = const VerificationMeta(
+    'refusedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> refusedAt = GeneratedColumn<DateTime>(
+    'refused_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    previousHash,
+    hash,
+    id,
+    demandeId,
+    recordedByPhone,
+    refusedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pret_demande_refus';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PretDemandeRefusData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('previous_hash')) {
+      context.handle(
+        _previousHashMeta,
+        previousHash.isAcceptableOrUnknown(
+          data['previous_hash']!,
+          _previousHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hash')) {
+      context.handle(
+        _hashMeta,
+        hash.isAcceptableOrUnknown(data['hash']!, _hashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hashMeta);
+    }
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('demande_id')) {
+      context.handle(
+        _demandeIdMeta,
+        demandeId.isAcceptableOrUnknown(data['demande_id']!, _demandeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_demandeIdMeta);
+    }
+    if (data.containsKey('recorded_by_phone')) {
+      context.handle(
+        _recordedByPhoneMeta,
+        recordedByPhone.isAcceptableOrUnknown(
+          data['recorded_by_phone']!,
+          _recordedByPhoneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recordedByPhoneMeta);
+    }
+    if (data.containsKey('refused_at')) {
+      context.handle(
+        _refusedAtMeta,
+        refusedAt.isAcceptableOrUnknown(data['refused_at']!, _refusedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PretDemandeRefusData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PretDemandeRefusData(
+      previousHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_hash'],
+      ),
+      hash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hash'],
+      )!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      demandeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}demande_id'],
+      )!,
+      recordedByPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recorded_by_phone'],
+      )!,
+      refusedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}refused_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PretDemandeRefusTable createAlias(String alias) {
+    return $PretDemandeRefusTable(attachedDatabase, alias);
+  }
+}
+
+class PretDemandeRefusData extends DataClass
+    implements Insertable<PretDemandeRefusData> {
+  final String? previousHash;
+  final String hash;
+  final String id;
+  final String demandeId;
+  final String recordedByPhone;
+  final DateTime refusedAt;
+  const PretDemandeRefusData({
+    this.previousHash,
+    required this.hash,
+    required this.id,
+    required this.demandeId,
+    required this.recordedByPhone,
+    required this.refusedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || previousHash != null) {
+      map['previous_hash'] = Variable<String>(previousHash);
+    }
+    map['hash'] = Variable<String>(hash);
+    map['id'] = Variable<String>(id);
+    map['demande_id'] = Variable<String>(demandeId);
+    map['recorded_by_phone'] = Variable<String>(recordedByPhone);
+    map['refused_at'] = Variable<DateTime>(refusedAt);
+    return map;
+  }
+
+  PretDemandeRefusCompanion toCompanion(bool nullToAbsent) {
+    return PretDemandeRefusCompanion(
+      previousHash: previousHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousHash),
+      hash: Value(hash),
+      id: Value(id),
+      demandeId: Value(demandeId),
+      recordedByPhone: Value(recordedByPhone),
+      refusedAt: Value(refusedAt),
+    );
+  }
+
+  factory PretDemandeRefusData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PretDemandeRefusData(
+      previousHash: serializer.fromJson<String?>(json['previousHash']),
+      hash: serializer.fromJson<String>(json['hash']),
+      id: serializer.fromJson<String>(json['id']),
+      demandeId: serializer.fromJson<String>(json['demandeId']),
+      recordedByPhone: serializer.fromJson<String>(json['recordedByPhone']),
+      refusedAt: serializer.fromJson<DateTime>(json['refusedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'previousHash': serializer.toJson<String?>(previousHash),
+      'hash': serializer.toJson<String>(hash),
+      'id': serializer.toJson<String>(id),
+      'demandeId': serializer.toJson<String>(demandeId),
+      'recordedByPhone': serializer.toJson<String>(recordedByPhone),
+      'refusedAt': serializer.toJson<DateTime>(refusedAt),
+    };
+  }
+
+  PretDemandeRefusData copyWith({
+    Value<String?> previousHash = const Value.absent(),
+    String? hash,
+    String? id,
+    String? demandeId,
+    String? recordedByPhone,
+    DateTime? refusedAt,
+  }) => PretDemandeRefusData(
+    previousHash: previousHash.present ? previousHash.value : this.previousHash,
+    hash: hash ?? this.hash,
+    id: id ?? this.id,
+    demandeId: demandeId ?? this.demandeId,
+    recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+    refusedAt: refusedAt ?? this.refusedAt,
+  );
+  PretDemandeRefusData copyWithCompanion(PretDemandeRefusCompanion data) {
+    return PretDemandeRefusData(
+      previousHash: data.previousHash.present
+          ? data.previousHash.value
+          : this.previousHash,
+      hash: data.hash.present ? data.hash.value : this.hash,
+      id: data.id.present ? data.id.value : this.id,
+      demandeId: data.demandeId.present ? data.demandeId.value : this.demandeId,
+      recordedByPhone: data.recordedByPhone.present
+          ? data.recordedByPhone.value
+          : this.recordedByPhone,
+      refusedAt: data.refusedAt.present ? data.refusedAt.value : this.refusedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PretDemandeRefusData(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('demandeId: $demandeId, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('refusedAt: $refusedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    previousHash,
+    hash,
+    id,
+    demandeId,
+    recordedByPhone,
+    refusedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PretDemandeRefusData &&
+          other.previousHash == this.previousHash &&
+          other.hash == this.hash &&
+          other.id == this.id &&
+          other.demandeId == this.demandeId &&
+          other.recordedByPhone == this.recordedByPhone &&
+          other.refusedAt == this.refusedAt);
+}
+
+class PretDemandeRefusCompanion extends UpdateCompanion<PretDemandeRefusData> {
+  final Value<String?> previousHash;
+  final Value<String> hash;
+  final Value<String> id;
+  final Value<String> demandeId;
+  final Value<String> recordedByPhone;
+  final Value<DateTime> refusedAt;
+  final Value<int> rowid;
+  const PretDemandeRefusCompanion({
+    this.previousHash = const Value.absent(),
+    this.hash = const Value.absent(),
+    this.id = const Value.absent(),
+    this.demandeId = const Value.absent(),
+    this.recordedByPhone = const Value.absent(),
+    this.refusedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PretDemandeRefusCompanion.insert({
+    this.previousHash = const Value.absent(),
+    required String hash,
+    required String id,
+    required String demandeId,
+    required String recordedByPhone,
+    this.refusedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : hash = Value(hash),
+       id = Value(id),
+       demandeId = Value(demandeId),
+       recordedByPhone = Value(recordedByPhone);
+  static Insertable<PretDemandeRefusData> custom({
+    Expression<String>? previousHash,
+    Expression<String>? hash,
+    Expression<String>? id,
+    Expression<String>? demandeId,
+    Expression<String>? recordedByPhone,
+    Expression<DateTime>? refusedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (previousHash != null) 'previous_hash': previousHash,
+      if (hash != null) 'hash': hash,
+      if (id != null) 'id': id,
+      if (demandeId != null) 'demande_id': demandeId,
+      if (recordedByPhone != null) 'recorded_by_phone': recordedByPhone,
+      if (refusedAt != null) 'refused_at': refusedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PretDemandeRefusCompanion copyWith({
+    Value<String?>? previousHash,
+    Value<String>? hash,
+    Value<String>? id,
+    Value<String>? demandeId,
+    Value<String>? recordedByPhone,
+    Value<DateTime>? refusedAt,
+    Value<int>? rowid,
+  }) {
+    return PretDemandeRefusCompanion(
+      previousHash: previousHash ?? this.previousHash,
+      hash: hash ?? this.hash,
+      id: id ?? this.id,
+      demandeId: demandeId ?? this.demandeId,
+      recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+      refusedAt: refusedAt ?? this.refusedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (previousHash.present) {
+      map['previous_hash'] = Variable<String>(previousHash.value);
+    }
+    if (hash.present) {
+      map['hash'] = Variable<String>(hash.value);
+    }
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (demandeId.present) {
+      map['demande_id'] = Variable<String>(demandeId.value);
+    }
+    if (recordedByPhone.present) {
+      map['recorded_by_phone'] = Variable<String>(recordedByPhone.value);
+    }
+    if (refusedAt.present) {
+      map['refused_at'] = Variable<DateTime>(refusedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PretDemandeRefusCompanion(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('demandeId: $demandeId, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('refusedAt: $refusedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AmendesTable extends Amendes with TableInfo<$AmendesTable, Amende> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -6403,6 +7949,40 @@ class $AmendesTable extends Amendes with TableInfo<$AmendesTable, Amende> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _carnetNumeroMeta = const VerificationMeta(
+    'carnetNumero',
+  );
+  @override
+  late final GeneratedColumn<int> carnetNumero = GeneratedColumn<int>(
+    'carnet_numero',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _echeanceDateMeta = const VerificationMeta(
+    'echeanceDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> echeanceDate = GeneratedColumn<DateTime>(
+    'echeance_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _motifCodeSystemeMeta = const VerificationMeta(
+    'motifCodeSysteme',
+  );
+  @override
+  late final GeneratedColumn<String> motifCodeSysteme = GeneratedColumn<String>(
+    'motif_code_systeme',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _estAutoGenereeMeta = const VerificationMeta(
     'estAutoGeneree',
   );
@@ -6429,6 +8009,17 @@ class $AmendesTable extends Amendes with TableInfo<$AmendesTable, Amende> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _reviewedAtMeta = const VerificationMeta(
+    'reviewedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> reviewedAt = GeneratedColumn<DateTime>(
+    'reviewed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     previousHash,
@@ -6443,8 +8034,12 @@ class $AmendesTable extends Amendes with TableInfo<$AmendesTable, Amende> {
     motif,
     recordedByPhone,
     recordedAt,
+    carnetNumero,
+    echeanceDate,
+    motifCodeSysteme,
     estAutoGeneree,
     confirmedAt,
+    reviewedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6555,6 +8150,33 @@ class $AmendesTable extends Amendes with TableInfo<$AmendesTable, Amende> {
         recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
       );
     }
+    if (data.containsKey('carnet_numero')) {
+      context.handle(
+        _carnetNumeroMeta,
+        carnetNumero.isAcceptableOrUnknown(
+          data['carnet_numero']!,
+          _carnetNumeroMeta,
+        ),
+      );
+    }
+    if (data.containsKey('echeance_date')) {
+      context.handle(
+        _echeanceDateMeta,
+        echeanceDate.isAcceptableOrUnknown(
+          data['echeance_date']!,
+          _echeanceDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('motif_code_systeme')) {
+      context.handle(
+        _motifCodeSystemeMeta,
+        motifCodeSysteme.isAcceptableOrUnknown(
+          data['motif_code_systeme']!,
+          _motifCodeSystemeMeta,
+        ),
+      );
+    }
     if (data.containsKey('est_auto_generee')) {
       context.handle(
         _estAutoGenereeMeta,
@@ -6571,6 +8193,12 @@ class $AmendesTable extends Amendes with TableInfo<$AmendesTable, Amende> {
           data['confirmed_at']!,
           _confirmedAtMeta,
         ),
+      );
+    }
+    if (data.containsKey('reviewed_at')) {
+      context.handle(
+        _reviewedAtMeta,
+        reviewedAt.isAcceptableOrUnknown(data['reviewed_at']!, _reviewedAtMeta),
       );
     }
     return context;
@@ -6630,6 +8258,18 @@ class $AmendesTable extends Amendes with TableInfo<$AmendesTable, Amende> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}recorded_at'],
       )!,
+      carnetNumero: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}carnet_numero'],
+      )!,
+      echeanceDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}echeance_date'],
+      ),
+      motifCodeSysteme: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}motif_code_systeme'],
+      ),
       estAutoGeneree: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}est_auto_generee'],
@@ -6637,6 +8277,10 @@ class $AmendesTable extends Amendes with TableInfo<$AmendesTable, Amende> {
       confirmedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}confirmed_at'],
+      ),
+      reviewedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}reviewed_at'],
       ),
     );
   }
@@ -6671,6 +8315,25 @@ class Amende extends DataClass implements Insertable<Amende> {
   final String recordedByPhone;
   final DateTime recordedAt;
 
+  /// Carnet concerné (1 ou 2) — une amende est désormais propre à un
+  /// carnet, jamais partagée entre les 2 carnets d'un même membre (voir
+  /// DECISIONS.md, "Amende par carnet, pas par membre").
+  final int carnetNumero;
+
+  /// Date de l'échéance/réunion concernée — sert à la validation de
+  /// cohérence entre motifs système (voir
+  /// [AppDatabase.motifsSystemeApplicables]) et à la vérification
+  /// interactive à la clôture de journée. `null` pour une amende
+  /// manuelle sans échéance précise (ex. importée).
+  final DateTime? echeanceDate;
+
+  /// Copie figée (jamais une référence vivante, comme [motif]/
+  /// [montantFcfa]) du `codeSysteme` du motif au moment de la saisie —
+  /// `null` pour un motif ajouté manuellement par le groupe. Permet de
+  /// reconnaître les 3 motifs système même si leur libellé a été
+  /// renommé depuis.
+  final String? motifCodeSysteme;
+
   /// Vrai si créée automatiquement pour une échéance manquée (skill
   /// avec-business-rules, section "Retard de cotisation"), plutôt que
   /// saisie librement par l'agent. Sert à cibler les amendes proposées à
@@ -6678,10 +8341,23 @@ class Amende extends DataClass implements Insertable<Amende> {
   /// [AppDatabase.amendesEnAttenteRevue].
   final bool estAutoGeneree;
 
-  /// Renseigné quand l'agent a explicitement confirmé une amende
-  /// auto-générée à la séance de revue — évite qu'elle réapparaisse
-  /// indéfiniment dans la liste à revoir une fois traitée.
+  /// Renseigné quand cette amende a été **réglée** — cash (immédiat) ou
+  /// par déduction automatique de la cotisation à la clôture du cycle
+  /// (voir DECISIONS.md, "Les amendes ne sont plus une dette"). Une
+  /// amende avec `confirmedAt == null` est "non soldée" (compte pour
+  /// [AppDatabase.montantAmendesNonSoldeesFcfa]). Régler une amende
+  /// renseigne aussi [reviewedAt] s'il ne l'était pas déjà (payer
+  /// équivaut à l'avoir revue).
   final DateTime? confirmedAt;
+
+  /// Renseigné quand l'agent a validé une amende auto-générée à la
+  /// séance de revue ("Confirmer telle quelle" — voir DECISIONS.md,
+  /// "Écran Cotisations moins chargé") — confirme seulement que
+  /// l'absence est réelle, **n'implique aucun règlement cash** ;
+  /// distinct de [confirmedAt]. Évite qu'elle réapparaisse
+  /// indéfiniment dans la liste bloquante à revoir une fois traitée,
+  /// qu'elle soit déjà payée ou non.
+  final DateTime? reviewedAt;
   const Amende({
     this.previousHash,
     required this.hash,
@@ -6695,8 +8371,12 @@ class Amende extends DataClass implements Insertable<Amende> {
     required this.motif,
     required this.recordedByPhone,
     required this.recordedAt,
+    required this.carnetNumero,
+    this.echeanceDate,
+    this.motifCodeSysteme,
     required this.estAutoGeneree,
     this.confirmedAt,
+    this.reviewedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6715,9 +8395,19 @@ class Amende extends DataClass implements Insertable<Amende> {
     map['motif'] = Variable<String>(motif);
     map['recorded_by_phone'] = Variable<String>(recordedByPhone);
     map['recorded_at'] = Variable<DateTime>(recordedAt);
+    map['carnet_numero'] = Variable<int>(carnetNumero);
+    if (!nullToAbsent || echeanceDate != null) {
+      map['echeance_date'] = Variable<DateTime>(echeanceDate);
+    }
+    if (!nullToAbsent || motifCodeSysteme != null) {
+      map['motif_code_systeme'] = Variable<String>(motifCodeSysteme);
+    }
     map['est_auto_generee'] = Variable<bool>(estAutoGeneree);
     if (!nullToAbsent || confirmedAt != null) {
       map['confirmed_at'] = Variable<DateTime>(confirmedAt);
+    }
+    if (!nullToAbsent || reviewedAt != null) {
+      map['reviewed_at'] = Variable<DateTime>(reviewedAt);
     }
     return map;
   }
@@ -6738,10 +8428,20 @@ class Amende extends DataClass implements Insertable<Amende> {
       motif: Value(motif),
       recordedByPhone: Value(recordedByPhone),
       recordedAt: Value(recordedAt),
+      carnetNumero: Value(carnetNumero),
+      echeanceDate: echeanceDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(echeanceDate),
+      motifCodeSysteme: motifCodeSysteme == null && nullToAbsent
+          ? const Value.absent()
+          : Value(motifCodeSysteme),
       estAutoGeneree: Value(estAutoGeneree),
       confirmedAt: confirmedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(confirmedAt),
+      reviewedAt: reviewedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reviewedAt),
     );
   }
 
@@ -6763,8 +8463,12 @@ class Amende extends DataClass implements Insertable<Amende> {
       motif: serializer.fromJson<String>(json['motif']),
       recordedByPhone: serializer.fromJson<String>(json['recordedByPhone']),
       recordedAt: serializer.fromJson<DateTime>(json['recordedAt']),
+      carnetNumero: serializer.fromJson<int>(json['carnetNumero']),
+      echeanceDate: serializer.fromJson<DateTime?>(json['echeanceDate']),
+      motifCodeSysteme: serializer.fromJson<String?>(json['motifCodeSysteme']),
       estAutoGeneree: serializer.fromJson<bool>(json['estAutoGeneree']),
       confirmedAt: serializer.fromJson<DateTime?>(json['confirmedAt']),
+      reviewedAt: serializer.fromJson<DateTime?>(json['reviewedAt']),
     );
   }
   @override
@@ -6783,8 +8487,12 @@ class Amende extends DataClass implements Insertable<Amende> {
       'motif': serializer.toJson<String>(motif),
       'recordedByPhone': serializer.toJson<String>(recordedByPhone),
       'recordedAt': serializer.toJson<DateTime>(recordedAt),
+      'carnetNumero': serializer.toJson<int>(carnetNumero),
+      'echeanceDate': serializer.toJson<DateTime?>(echeanceDate),
+      'motifCodeSysteme': serializer.toJson<String?>(motifCodeSysteme),
       'estAutoGeneree': serializer.toJson<bool>(estAutoGeneree),
       'confirmedAt': serializer.toJson<DateTime?>(confirmedAt),
+      'reviewedAt': serializer.toJson<DateTime?>(reviewedAt),
     };
   }
 
@@ -6801,8 +8509,12 @@ class Amende extends DataClass implements Insertable<Amende> {
     String? motif,
     String? recordedByPhone,
     DateTime? recordedAt,
+    int? carnetNumero,
+    Value<DateTime?> echeanceDate = const Value.absent(),
+    Value<String?> motifCodeSysteme = const Value.absent(),
     bool? estAutoGeneree,
     Value<DateTime?> confirmedAt = const Value.absent(),
+    Value<DateTime?> reviewedAt = const Value.absent(),
   }) => Amende(
     previousHash: previousHash.present ? previousHash.value : this.previousHash,
     hash: hash ?? this.hash,
@@ -6816,8 +8528,14 @@ class Amende extends DataClass implements Insertable<Amende> {
     motif: motif ?? this.motif,
     recordedByPhone: recordedByPhone ?? this.recordedByPhone,
     recordedAt: recordedAt ?? this.recordedAt,
+    carnetNumero: carnetNumero ?? this.carnetNumero,
+    echeanceDate: echeanceDate.present ? echeanceDate.value : this.echeanceDate,
+    motifCodeSysteme: motifCodeSysteme.present
+        ? motifCodeSysteme.value
+        : this.motifCodeSysteme,
     estAutoGeneree: estAutoGeneree ?? this.estAutoGeneree,
     confirmedAt: confirmedAt.present ? confirmedAt.value : this.confirmedAt,
+    reviewedAt: reviewedAt.present ? reviewedAt.value : this.reviewedAt,
   );
   Amende copyWithCompanion(AmendesCompanion data) {
     return Amende(
@@ -6845,12 +8563,24 @@ class Amende extends DataClass implements Insertable<Amende> {
       recordedAt: data.recordedAt.present
           ? data.recordedAt.value
           : this.recordedAt,
+      carnetNumero: data.carnetNumero.present
+          ? data.carnetNumero.value
+          : this.carnetNumero,
+      echeanceDate: data.echeanceDate.present
+          ? data.echeanceDate.value
+          : this.echeanceDate,
+      motifCodeSysteme: data.motifCodeSysteme.present
+          ? data.motifCodeSysteme.value
+          : this.motifCodeSysteme,
       estAutoGeneree: data.estAutoGeneree.present
           ? data.estAutoGeneree.value
           : this.estAutoGeneree,
       confirmedAt: data.confirmedAt.present
           ? data.confirmedAt.value
           : this.confirmedAt,
+      reviewedAt: data.reviewedAt.present
+          ? data.reviewedAt.value
+          : this.reviewedAt,
     );
   }
 
@@ -6869,8 +8599,12 @@ class Amende extends DataClass implements Insertable<Amende> {
           ..write('motif: $motif, ')
           ..write('recordedByPhone: $recordedByPhone, ')
           ..write('recordedAt: $recordedAt, ')
+          ..write('carnetNumero: $carnetNumero, ')
+          ..write('echeanceDate: $echeanceDate, ')
+          ..write('motifCodeSysteme: $motifCodeSysteme, ')
           ..write('estAutoGeneree: $estAutoGeneree, ')
-          ..write('confirmedAt: $confirmedAt')
+          ..write('confirmedAt: $confirmedAt, ')
+          ..write('reviewedAt: $reviewedAt')
           ..write(')'))
         .toString();
   }
@@ -6889,8 +8623,12 @@ class Amende extends DataClass implements Insertable<Amende> {
     motif,
     recordedByPhone,
     recordedAt,
+    carnetNumero,
+    echeanceDate,
+    motifCodeSysteme,
     estAutoGeneree,
     confirmedAt,
+    reviewedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -6908,8 +8646,12 @@ class Amende extends DataClass implements Insertable<Amende> {
           other.motif == this.motif &&
           other.recordedByPhone == this.recordedByPhone &&
           other.recordedAt == this.recordedAt &&
+          other.carnetNumero == this.carnetNumero &&
+          other.echeanceDate == this.echeanceDate &&
+          other.motifCodeSysteme == this.motifCodeSysteme &&
           other.estAutoGeneree == this.estAutoGeneree &&
-          other.confirmedAt == this.confirmedAt);
+          other.confirmedAt == this.confirmedAt &&
+          other.reviewedAt == this.reviewedAt);
 }
 
 class AmendesCompanion extends UpdateCompanion<Amende> {
@@ -6925,8 +8667,12 @@ class AmendesCompanion extends UpdateCompanion<Amende> {
   final Value<String> motif;
   final Value<String> recordedByPhone;
   final Value<DateTime> recordedAt;
+  final Value<int> carnetNumero;
+  final Value<DateTime?> echeanceDate;
+  final Value<String?> motifCodeSysteme;
   final Value<bool> estAutoGeneree;
   final Value<DateTime?> confirmedAt;
+  final Value<DateTime?> reviewedAt;
   final Value<int> rowid;
   const AmendesCompanion({
     this.previousHash = const Value.absent(),
@@ -6941,8 +8687,12 @@ class AmendesCompanion extends UpdateCompanion<Amende> {
     this.motif = const Value.absent(),
     this.recordedByPhone = const Value.absent(),
     this.recordedAt = const Value.absent(),
+    this.carnetNumero = const Value.absent(),
+    this.echeanceDate = const Value.absent(),
+    this.motifCodeSysteme = const Value.absent(),
     this.estAutoGeneree = const Value.absent(),
     this.confirmedAt = const Value.absent(),
+    this.reviewedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AmendesCompanion.insert({
@@ -6958,8 +8708,12 @@ class AmendesCompanion extends UpdateCompanion<Amende> {
     required String motif,
     required String recordedByPhone,
     this.recordedAt = const Value.absent(),
+    this.carnetNumero = const Value.absent(),
+    this.echeanceDate = const Value.absent(),
+    this.motifCodeSysteme = const Value.absent(),
     this.estAutoGeneree = const Value.absent(),
     this.confirmedAt = const Value.absent(),
+    this.reviewedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : hash = Value(hash),
        id = Value(id),
@@ -6982,8 +8736,12 @@ class AmendesCompanion extends UpdateCompanion<Amende> {
     Expression<String>? motif,
     Expression<String>? recordedByPhone,
     Expression<DateTime>? recordedAt,
+    Expression<int>? carnetNumero,
+    Expression<DateTime>? echeanceDate,
+    Expression<String>? motifCodeSysteme,
     Expression<bool>? estAutoGeneree,
     Expression<DateTime>? confirmedAt,
+    Expression<DateTime>? reviewedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6999,8 +8757,12 @@ class AmendesCompanion extends UpdateCompanion<Amende> {
       if (motif != null) 'motif': motif,
       if (recordedByPhone != null) 'recorded_by_phone': recordedByPhone,
       if (recordedAt != null) 'recorded_at': recordedAt,
+      if (carnetNumero != null) 'carnet_numero': carnetNumero,
+      if (echeanceDate != null) 'echeance_date': echeanceDate,
+      if (motifCodeSysteme != null) 'motif_code_systeme': motifCodeSysteme,
       if (estAutoGeneree != null) 'est_auto_generee': estAutoGeneree,
       if (confirmedAt != null) 'confirmed_at': confirmedAt,
+      if (reviewedAt != null) 'reviewed_at': reviewedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -7018,8 +8780,12 @@ class AmendesCompanion extends UpdateCompanion<Amende> {
     Value<String>? motif,
     Value<String>? recordedByPhone,
     Value<DateTime>? recordedAt,
+    Value<int>? carnetNumero,
+    Value<DateTime?>? echeanceDate,
+    Value<String?>? motifCodeSysteme,
     Value<bool>? estAutoGeneree,
     Value<DateTime?>? confirmedAt,
+    Value<DateTime?>? reviewedAt,
     Value<int>? rowid,
   }) {
     return AmendesCompanion(
@@ -7035,8 +8801,12 @@ class AmendesCompanion extends UpdateCompanion<Amende> {
       motif: motif ?? this.motif,
       recordedByPhone: recordedByPhone ?? this.recordedByPhone,
       recordedAt: recordedAt ?? this.recordedAt,
+      carnetNumero: carnetNumero ?? this.carnetNumero,
+      echeanceDate: echeanceDate ?? this.echeanceDate,
+      motifCodeSysteme: motifCodeSysteme ?? this.motifCodeSysteme,
       estAutoGeneree: estAutoGeneree ?? this.estAutoGeneree,
       confirmedAt: confirmedAt ?? this.confirmedAt,
+      reviewedAt: reviewedAt ?? this.reviewedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -7080,11 +8850,23 @@ class AmendesCompanion extends UpdateCompanion<Amende> {
     if (recordedAt.present) {
       map['recorded_at'] = Variable<DateTime>(recordedAt.value);
     }
+    if (carnetNumero.present) {
+      map['carnet_numero'] = Variable<int>(carnetNumero.value);
+    }
+    if (echeanceDate.present) {
+      map['echeance_date'] = Variable<DateTime>(echeanceDate.value);
+    }
+    if (motifCodeSysteme.present) {
+      map['motif_code_systeme'] = Variable<String>(motifCodeSysteme.value);
+    }
     if (estAutoGeneree.present) {
       map['est_auto_generee'] = Variable<bool>(estAutoGeneree.value);
     }
     if (confirmedAt.present) {
       map['confirmed_at'] = Variable<DateTime>(confirmedAt.value);
+    }
+    if (reviewedAt.present) {
+      map['reviewed_at'] = Variable<DateTime>(reviewedAt.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -7107,8 +8889,12 @@ class AmendesCompanion extends UpdateCompanion<Amende> {
           ..write('motif: $motif, ')
           ..write('recordedByPhone: $recordedByPhone, ')
           ..write('recordedAt: $recordedAt, ')
+          ..write('carnetNumero: $carnetNumero, ')
+          ..write('echeanceDate: $echeanceDate, ')
+          ..write('motifCodeSysteme: $motifCodeSysteme, ')
           ..write('estAutoGeneree: $estAutoGeneree, ')
           ..write('confirmedAt: $confirmedAt, ')
+          ..write('reviewedAt: $reviewedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7588,6 +9374,1121 @@ class AmendeAnnulationsCompanion extends UpdateCompanion<AmendeAnnulation> {
   }
 }
 
+class $AmendePaiementsTable extends AmendePaiements
+    with TableInfo<$AmendePaiementsTable, AmendePaiement> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AmendePaiementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _previousHashMeta = const VerificationMeta(
+    'previousHash',
+  );
+  @override
+  late final GeneratedColumn<String> previousHash = GeneratedColumn<String>(
+    'previous_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hashMeta = const VerificationMeta('hash');
+  @override
+  late final GeneratedColumn<String> hash = GeneratedColumn<String>(
+    'hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amendeIdMeta = const VerificationMeta(
+    'amendeId',
+  );
+  @override
+  late final GeneratedColumn<String> amendeId = GeneratedColumn<String>(
+    'amende_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES amendes (id)',
+    ),
+  );
+  static const VerificationMeta _montantFcfaMeta = const VerificationMeta(
+    'montantFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> montantFcfa = GeneratedColumn<int>(
+    'montant_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordedByPhoneMeta = const VerificationMeta(
+    'recordedByPhone',
+  );
+  @override
+  late final GeneratedColumn<String> recordedByPhone = GeneratedColumn<String>(
+    'recorded_by_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordedAtMeta = const VerificationMeta(
+    'recordedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> recordedAt = GeneratedColumn<DateTime>(
+    'recorded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    previousHash,
+    hash,
+    id,
+    amendeId,
+    montantFcfa,
+    recordedByPhone,
+    recordedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'amende_paiements';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AmendePaiement> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('previous_hash')) {
+      context.handle(
+        _previousHashMeta,
+        previousHash.isAcceptableOrUnknown(
+          data['previous_hash']!,
+          _previousHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hash')) {
+      context.handle(
+        _hashMeta,
+        hash.isAcceptableOrUnknown(data['hash']!, _hashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hashMeta);
+    }
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('amende_id')) {
+      context.handle(
+        _amendeIdMeta,
+        amendeId.isAcceptableOrUnknown(data['amende_id']!, _amendeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amendeIdMeta);
+    }
+    if (data.containsKey('montant_fcfa')) {
+      context.handle(
+        _montantFcfaMeta,
+        montantFcfa.isAcceptableOrUnknown(
+          data['montant_fcfa']!,
+          _montantFcfaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montantFcfaMeta);
+    }
+    if (data.containsKey('recorded_by_phone')) {
+      context.handle(
+        _recordedByPhoneMeta,
+        recordedByPhone.isAcceptableOrUnknown(
+          data['recorded_by_phone']!,
+          _recordedByPhoneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recordedByPhoneMeta);
+    }
+    if (data.containsKey('recorded_at')) {
+      context.handle(
+        _recordedAtMeta,
+        recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AmendePaiement map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AmendePaiement(
+      previousHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_hash'],
+      ),
+      hash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hash'],
+      )!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      amendeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}amende_id'],
+      )!,
+      montantFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_fcfa'],
+      )!,
+      recordedByPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recorded_by_phone'],
+      )!,
+      recordedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recorded_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AmendePaiementsTable createAlias(String alias) {
+    return $AmendePaiementsTable(attachedDatabase, alias);
+  }
+}
+
+class AmendePaiement extends DataClass implements Insertable<AmendePaiement> {
+  final String? previousHash;
+  final String hash;
+  final String id;
+  final String amendeId;
+  final int montantFcfa;
+  final String recordedByPhone;
+  final DateTime recordedAt;
+  const AmendePaiement({
+    this.previousHash,
+    required this.hash,
+    required this.id,
+    required this.amendeId,
+    required this.montantFcfa,
+    required this.recordedByPhone,
+    required this.recordedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || previousHash != null) {
+      map['previous_hash'] = Variable<String>(previousHash);
+    }
+    map['hash'] = Variable<String>(hash);
+    map['id'] = Variable<String>(id);
+    map['amende_id'] = Variable<String>(amendeId);
+    map['montant_fcfa'] = Variable<int>(montantFcfa);
+    map['recorded_by_phone'] = Variable<String>(recordedByPhone);
+    map['recorded_at'] = Variable<DateTime>(recordedAt);
+    return map;
+  }
+
+  AmendePaiementsCompanion toCompanion(bool nullToAbsent) {
+    return AmendePaiementsCompanion(
+      previousHash: previousHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousHash),
+      hash: Value(hash),
+      id: Value(id),
+      amendeId: Value(amendeId),
+      montantFcfa: Value(montantFcfa),
+      recordedByPhone: Value(recordedByPhone),
+      recordedAt: Value(recordedAt),
+    );
+  }
+
+  factory AmendePaiement.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AmendePaiement(
+      previousHash: serializer.fromJson<String?>(json['previousHash']),
+      hash: serializer.fromJson<String>(json['hash']),
+      id: serializer.fromJson<String>(json['id']),
+      amendeId: serializer.fromJson<String>(json['amendeId']),
+      montantFcfa: serializer.fromJson<int>(json['montantFcfa']),
+      recordedByPhone: serializer.fromJson<String>(json['recordedByPhone']),
+      recordedAt: serializer.fromJson<DateTime>(json['recordedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'previousHash': serializer.toJson<String?>(previousHash),
+      'hash': serializer.toJson<String>(hash),
+      'id': serializer.toJson<String>(id),
+      'amendeId': serializer.toJson<String>(amendeId),
+      'montantFcfa': serializer.toJson<int>(montantFcfa),
+      'recordedByPhone': serializer.toJson<String>(recordedByPhone),
+      'recordedAt': serializer.toJson<DateTime>(recordedAt),
+    };
+  }
+
+  AmendePaiement copyWith({
+    Value<String?> previousHash = const Value.absent(),
+    String? hash,
+    String? id,
+    String? amendeId,
+    int? montantFcfa,
+    String? recordedByPhone,
+    DateTime? recordedAt,
+  }) => AmendePaiement(
+    previousHash: previousHash.present ? previousHash.value : this.previousHash,
+    hash: hash ?? this.hash,
+    id: id ?? this.id,
+    amendeId: amendeId ?? this.amendeId,
+    montantFcfa: montantFcfa ?? this.montantFcfa,
+    recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+    recordedAt: recordedAt ?? this.recordedAt,
+  );
+  AmendePaiement copyWithCompanion(AmendePaiementsCompanion data) {
+    return AmendePaiement(
+      previousHash: data.previousHash.present
+          ? data.previousHash.value
+          : this.previousHash,
+      hash: data.hash.present ? data.hash.value : this.hash,
+      id: data.id.present ? data.id.value : this.id,
+      amendeId: data.amendeId.present ? data.amendeId.value : this.amendeId,
+      montantFcfa: data.montantFcfa.present
+          ? data.montantFcfa.value
+          : this.montantFcfa,
+      recordedByPhone: data.recordedByPhone.present
+          ? data.recordedByPhone.value
+          : this.recordedByPhone,
+      recordedAt: data.recordedAt.present
+          ? data.recordedAt.value
+          : this.recordedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AmendePaiement(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('amendeId: $amendeId, ')
+          ..write('montantFcfa: $montantFcfa, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('recordedAt: $recordedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    previousHash,
+    hash,
+    id,
+    amendeId,
+    montantFcfa,
+    recordedByPhone,
+    recordedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AmendePaiement &&
+          other.previousHash == this.previousHash &&
+          other.hash == this.hash &&
+          other.id == this.id &&
+          other.amendeId == this.amendeId &&
+          other.montantFcfa == this.montantFcfa &&
+          other.recordedByPhone == this.recordedByPhone &&
+          other.recordedAt == this.recordedAt);
+}
+
+class AmendePaiementsCompanion extends UpdateCompanion<AmendePaiement> {
+  final Value<String?> previousHash;
+  final Value<String> hash;
+  final Value<String> id;
+  final Value<String> amendeId;
+  final Value<int> montantFcfa;
+  final Value<String> recordedByPhone;
+  final Value<DateTime> recordedAt;
+  final Value<int> rowid;
+  const AmendePaiementsCompanion({
+    this.previousHash = const Value.absent(),
+    this.hash = const Value.absent(),
+    this.id = const Value.absent(),
+    this.amendeId = const Value.absent(),
+    this.montantFcfa = const Value.absent(),
+    this.recordedByPhone = const Value.absent(),
+    this.recordedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AmendePaiementsCompanion.insert({
+    this.previousHash = const Value.absent(),
+    required String hash,
+    required String id,
+    required String amendeId,
+    required int montantFcfa,
+    required String recordedByPhone,
+    this.recordedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : hash = Value(hash),
+       id = Value(id),
+       amendeId = Value(amendeId),
+       montantFcfa = Value(montantFcfa),
+       recordedByPhone = Value(recordedByPhone);
+  static Insertable<AmendePaiement> custom({
+    Expression<String>? previousHash,
+    Expression<String>? hash,
+    Expression<String>? id,
+    Expression<String>? amendeId,
+    Expression<int>? montantFcfa,
+    Expression<String>? recordedByPhone,
+    Expression<DateTime>? recordedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (previousHash != null) 'previous_hash': previousHash,
+      if (hash != null) 'hash': hash,
+      if (id != null) 'id': id,
+      if (amendeId != null) 'amende_id': amendeId,
+      if (montantFcfa != null) 'montant_fcfa': montantFcfa,
+      if (recordedByPhone != null) 'recorded_by_phone': recordedByPhone,
+      if (recordedAt != null) 'recorded_at': recordedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AmendePaiementsCompanion copyWith({
+    Value<String?>? previousHash,
+    Value<String>? hash,
+    Value<String>? id,
+    Value<String>? amendeId,
+    Value<int>? montantFcfa,
+    Value<String>? recordedByPhone,
+    Value<DateTime>? recordedAt,
+    Value<int>? rowid,
+  }) {
+    return AmendePaiementsCompanion(
+      previousHash: previousHash ?? this.previousHash,
+      hash: hash ?? this.hash,
+      id: id ?? this.id,
+      amendeId: amendeId ?? this.amendeId,
+      montantFcfa: montantFcfa ?? this.montantFcfa,
+      recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+      recordedAt: recordedAt ?? this.recordedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (previousHash.present) {
+      map['previous_hash'] = Variable<String>(previousHash.value);
+    }
+    if (hash.present) {
+      map['hash'] = Variable<String>(hash.value);
+    }
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (amendeId.present) {
+      map['amende_id'] = Variable<String>(amendeId.value);
+    }
+    if (montantFcfa.present) {
+      map['montant_fcfa'] = Variable<int>(montantFcfa.value);
+    }
+    if (recordedByPhone.present) {
+      map['recorded_by_phone'] = Variable<String>(recordedByPhone.value);
+    }
+    if (recordedAt.present) {
+      map['recorded_at'] = Variable<DateTime>(recordedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AmendePaiementsCompanion(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('amendeId: $amendeId, ')
+          ..write('montantFcfa: $montantFcfa, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CotisationsExceptionnellesTable extends CotisationsExceptionnelles
+    with
+        TableInfo<$CotisationsExceptionnellesTable, CotisationsExceptionnelle> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CotisationsExceptionnellesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _previousHashMeta = const VerificationMeta(
+    'previousHash',
+  );
+  @override
+  late final GeneratedColumn<String> previousHash = GeneratedColumn<String>(
+    'previous_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hashMeta = const VerificationMeta('hash');
+  @override
+  late final GeneratedColumn<String> hash = GeneratedColumn<String>(
+    'hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES "groups" (id)',
+    ),
+  );
+  static const VerificationMeta _cycleIdMeta = const VerificationMeta(
+    'cycleId',
+  );
+  @override
+  late final GeneratedColumn<String> cycleId = GeneratedColumn<String>(
+    'cycle_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cycles (id)',
+    ),
+  );
+  static const VerificationMeta _motifMeta = const VerificationMeta('motif');
+  @override
+  late final GeneratedColumn<String> motif = GeneratedColumn<String>(
+    'motif',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montantFcfaMeta = const VerificationMeta(
+    'montantFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> montantFcfa = GeneratedColumn<int>(
+    'montant_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateLimiteMeta = const VerificationMeta(
+    'dateLimite',
+  );
+  @override
+  late final GeneratedColumn<DateTime> dateLimite = GeneratedColumn<DateTime>(
+    'date_limite',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdByPhoneMeta = const VerificationMeta(
+    'createdByPhone',
+  );
+  @override
+  late final GeneratedColumn<String> createdByPhone = GeneratedColumn<String>(
+    'created_by_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    motif,
+    montantFcfa,
+    dateLimite,
+    createdByPhone,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cotisations_exceptionnelles';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CotisationsExceptionnelle> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('previous_hash')) {
+      context.handle(
+        _previousHashMeta,
+        previousHash.isAcceptableOrUnknown(
+          data['previous_hash']!,
+          _previousHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hash')) {
+      context.handle(
+        _hashMeta,
+        hash.isAcceptableOrUnknown(data['hash']!, _hashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hashMeta);
+    }
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('cycle_id')) {
+      context.handle(
+        _cycleIdMeta,
+        cycleId.isAcceptableOrUnknown(data['cycle_id']!, _cycleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cycleIdMeta);
+    }
+    if (data.containsKey('motif')) {
+      context.handle(
+        _motifMeta,
+        motif.isAcceptableOrUnknown(data['motif']!, _motifMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_motifMeta);
+    }
+    if (data.containsKey('montant_fcfa')) {
+      context.handle(
+        _montantFcfaMeta,
+        montantFcfa.isAcceptableOrUnknown(
+          data['montant_fcfa']!,
+          _montantFcfaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montantFcfaMeta);
+    }
+    if (data.containsKey('date_limite')) {
+      context.handle(
+        _dateLimiteMeta,
+        dateLimite.isAcceptableOrUnknown(data['date_limite']!, _dateLimiteMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateLimiteMeta);
+    }
+    if (data.containsKey('created_by_phone')) {
+      context.handle(
+        _createdByPhoneMeta,
+        createdByPhone.isAcceptableOrUnknown(
+          data['created_by_phone']!,
+          _createdByPhoneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_createdByPhoneMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CotisationsExceptionnelle map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CotisationsExceptionnelle(
+      previousHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_hash'],
+      ),
+      hash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hash'],
+      )!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      cycleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_id'],
+      )!,
+      motif: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}motif'],
+      )!,
+      montantFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_fcfa'],
+      )!,
+      dateLimite: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date_limite'],
+      )!,
+      createdByPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_by_phone'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CotisationsExceptionnellesTable createAlias(String alias) {
+    return $CotisationsExceptionnellesTable(attachedDatabase, alias);
+  }
+}
+
+class CotisationsExceptionnelle extends DataClass
+    implements Insertable<CotisationsExceptionnelle> {
+  final String? previousHash;
+  final String hash;
+  final String id;
+  final String groupId;
+  final String cycleId;
+  final String motif;
+  final int montantFcfa;
+  final DateTime dateLimite;
+  final String createdByPhone;
+  final DateTime createdAt;
+  const CotisationsExceptionnelle({
+    this.previousHash,
+    required this.hash,
+    required this.id,
+    required this.groupId,
+    required this.cycleId,
+    required this.motif,
+    required this.montantFcfa,
+    required this.dateLimite,
+    required this.createdByPhone,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || previousHash != null) {
+      map['previous_hash'] = Variable<String>(previousHash);
+    }
+    map['hash'] = Variable<String>(hash);
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['cycle_id'] = Variable<String>(cycleId);
+    map['motif'] = Variable<String>(motif);
+    map['montant_fcfa'] = Variable<int>(montantFcfa);
+    map['date_limite'] = Variable<DateTime>(dateLimite);
+    map['created_by_phone'] = Variable<String>(createdByPhone);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CotisationsExceptionnellesCompanion toCompanion(bool nullToAbsent) {
+    return CotisationsExceptionnellesCompanion(
+      previousHash: previousHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousHash),
+      hash: Value(hash),
+      id: Value(id),
+      groupId: Value(groupId),
+      cycleId: Value(cycleId),
+      motif: Value(motif),
+      montantFcfa: Value(montantFcfa),
+      dateLimite: Value(dateLimite),
+      createdByPhone: Value(createdByPhone),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CotisationsExceptionnelle.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CotisationsExceptionnelle(
+      previousHash: serializer.fromJson<String?>(json['previousHash']),
+      hash: serializer.fromJson<String>(json['hash']),
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      cycleId: serializer.fromJson<String>(json['cycleId']),
+      motif: serializer.fromJson<String>(json['motif']),
+      montantFcfa: serializer.fromJson<int>(json['montantFcfa']),
+      dateLimite: serializer.fromJson<DateTime>(json['dateLimite']),
+      createdByPhone: serializer.fromJson<String>(json['createdByPhone']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'previousHash': serializer.toJson<String?>(previousHash),
+      'hash': serializer.toJson<String>(hash),
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'cycleId': serializer.toJson<String>(cycleId),
+      'motif': serializer.toJson<String>(motif),
+      'montantFcfa': serializer.toJson<int>(montantFcfa),
+      'dateLimite': serializer.toJson<DateTime>(dateLimite),
+      'createdByPhone': serializer.toJson<String>(createdByPhone),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CotisationsExceptionnelle copyWith({
+    Value<String?> previousHash = const Value.absent(),
+    String? hash,
+    String? id,
+    String? groupId,
+    String? cycleId,
+    String? motif,
+    int? montantFcfa,
+    DateTime? dateLimite,
+    String? createdByPhone,
+    DateTime? createdAt,
+  }) => CotisationsExceptionnelle(
+    previousHash: previousHash.present ? previousHash.value : this.previousHash,
+    hash: hash ?? this.hash,
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    cycleId: cycleId ?? this.cycleId,
+    motif: motif ?? this.motif,
+    montantFcfa: montantFcfa ?? this.montantFcfa,
+    dateLimite: dateLimite ?? this.dateLimite,
+    createdByPhone: createdByPhone ?? this.createdByPhone,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CotisationsExceptionnelle copyWithCompanion(
+    CotisationsExceptionnellesCompanion data,
+  ) {
+    return CotisationsExceptionnelle(
+      previousHash: data.previousHash.present
+          ? data.previousHash.value
+          : this.previousHash,
+      hash: data.hash.present ? data.hash.value : this.hash,
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      cycleId: data.cycleId.present ? data.cycleId.value : this.cycleId,
+      motif: data.motif.present ? data.motif.value : this.motif,
+      montantFcfa: data.montantFcfa.present
+          ? data.montantFcfa.value
+          : this.montantFcfa,
+      dateLimite: data.dateLimite.present
+          ? data.dateLimite.value
+          : this.dateLimite,
+      createdByPhone: data.createdByPhone.present
+          ? data.createdByPhone.value
+          : this.createdByPhone,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CotisationsExceptionnelle(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('motif: $motif, ')
+          ..write('montantFcfa: $montantFcfa, ')
+          ..write('dateLimite: $dateLimite, ')
+          ..write('createdByPhone: $createdByPhone, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    motif,
+    montantFcfa,
+    dateLimite,
+    createdByPhone,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CotisationsExceptionnelle &&
+          other.previousHash == this.previousHash &&
+          other.hash == this.hash &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.cycleId == this.cycleId &&
+          other.motif == this.motif &&
+          other.montantFcfa == this.montantFcfa &&
+          other.dateLimite == this.dateLimite &&
+          other.createdByPhone == this.createdByPhone &&
+          other.createdAt == this.createdAt);
+}
+
+class CotisationsExceptionnellesCompanion
+    extends UpdateCompanion<CotisationsExceptionnelle> {
+  final Value<String?> previousHash;
+  final Value<String> hash;
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> cycleId;
+  final Value<String> motif;
+  final Value<int> montantFcfa;
+  final Value<DateTime> dateLimite;
+  final Value<String> createdByPhone;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CotisationsExceptionnellesCompanion({
+    this.previousHash = const Value.absent(),
+    this.hash = const Value.absent(),
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.cycleId = const Value.absent(),
+    this.motif = const Value.absent(),
+    this.montantFcfa = const Value.absent(),
+    this.dateLimite = const Value.absent(),
+    this.createdByPhone = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CotisationsExceptionnellesCompanion.insert({
+    this.previousHash = const Value.absent(),
+    required String hash,
+    required String id,
+    required String groupId,
+    required String cycleId,
+    required String motif,
+    required int montantFcfa,
+    required DateTime dateLimite,
+    required String createdByPhone,
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : hash = Value(hash),
+       id = Value(id),
+       groupId = Value(groupId),
+       cycleId = Value(cycleId),
+       motif = Value(motif),
+       montantFcfa = Value(montantFcfa),
+       dateLimite = Value(dateLimite),
+       createdByPhone = Value(createdByPhone);
+  static Insertable<CotisationsExceptionnelle> custom({
+    Expression<String>? previousHash,
+    Expression<String>? hash,
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? cycleId,
+    Expression<String>? motif,
+    Expression<int>? montantFcfa,
+    Expression<DateTime>? dateLimite,
+    Expression<String>? createdByPhone,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (previousHash != null) 'previous_hash': previousHash,
+      if (hash != null) 'hash': hash,
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (cycleId != null) 'cycle_id': cycleId,
+      if (motif != null) 'motif': motif,
+      if (montantFcfa != null) 'montant_fcfa': montantFcfa,
+      if (dateLimite != null) 'date_limite': dateLimite,
+      if (createdByPhone != null) 'created_by_phone': createdByPhone,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CotisationsExceptionnellesCompanion copyWith({
+    Value<String?>? previousHash,
+    Value<String>? hash,
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? cycleId,
+    Value<String>? motif,
+    Value<int>? montantFcfa,
+    Value<DateTime>? dateLimite,
+    Value<String>? createdByPhone,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CotisationsExceptionnellesCompanion(
+      previousHash: previousHash ?? this.previousHash,
+      hash: hash ?? this.hash,
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      cycleId: cycleId ?? this.cycleId,
+      motif: motif ?? this.motif,
+      montantFcfa: montantFcfa ?? this.montantFcfa,
+      dateLimite: dateLimite ?? this.dateLimite,
+      createdByPhone: createdByPhone ?? this.createdByPhone,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (previousHash.present) {
+      map['previous_hash'] = Variable<String>(previousHash.value);
+    }
+    if (hash.present) {
+      map['hash'] = Variable<String>(hash.value);
+    }
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (cycleId.present) {
+      map['cycle_id'] = Variable<String>(cycleId.value);
+    }
+    if (motif.present) {
+      map['motif'] = Variable<String>(motif.value);
+    }
+    if (montantFcfa.present) {
+      map['montant_fcfa'] = Variable<int>(montantFcfa.value);
+    }
+    if (dateLimite.present) {
+      map['date_limite'] = Variable<DateTime>(dateLimite.value);
+    }
+    if (createdByPhone.present) {
+      map['created_by_phone'] = Variable<String>(createdByPhone.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CotisationsExceptionnellesCompanion(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('motif: $motif, ')
+          ..write('montantFcfa: $montantFcfa, ')
+          ..write('dateLimite: $dateLimite, ')
+          ..write('createdByPhone: $createdByPhone, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $FondsSolidariteContributionsTable extends FondsSolidariteContributions
     with
         TableInfo<
@@ -7739,6 +10640,20 @@ class $FondsSolidariteContributionsTable extends FondsSolidariteContributions
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _cotisationExceptionnelleIdMeta =
+      const VerificationMeta('cotisationExceptionnelleId');
+  @override
+  late final GeneratedColumn<String> cotisationExceptionnelleId =
+      GeneratedColumn<String>(
+        'cotisation_exceptionnelle_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES cotisations_exceptionnelles (id)',
+        ),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     previousHash,
@@ -7753,6 +10668,7 @@ class $FondsSolidariteContributionsTable extends FondsSolidariteContributions
     motif,
     recordedByPhone,
     recordedAt,
+    cotisationExceptionnelleId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -7861,6 +10777,15 @@ class $FondsSolidariteContributionsTable extends FondsSolidariteContributions
         recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
       );
     }
+    if (data.containsKey('cotisation_exceptionnelle_id')) {
+      context.handle(
+        _cotisationExceptionnelleIdMeta,
+        cotisationExceptionnelleId.isAcceptableOrUnknown(
+          data['cotisation_exceptionnelle_id']!,
+          _cotisationExceptionnelleIdMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -7921,6 +10846,10 @@ class $FondsSolidariteContributionsTable extends FondsSolidariteContributions
         DriftSqlType.dateTime,
         data['${effectivePrefix}recorded_at'],
       )!,
+      cotisationExceptionnelleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cotisation_exceptionnelle_id'],
+      ),
     );
   }
 
@@ -7954,6 +10883,13 @@ class FondsSolidariteContribution extends DataClass
   final String motif;
   final String recordedByPhone;
   final DateTime recordedAt;
+
+  /// Renseigné quand cette contribution règle (en partie ou en
+  /// totalité) une cotisation exceptionnelle précise — voir
+  /// [CotisationsExceptionnelles] et DECISIONS.md, "Cotisations
+  /// exceptionnelles". `null` pour une contribution "ordinaire" (fonds
+  /// obligatoire récurrent, ou libre).
+  final String? cotisationExceptionnelleId;
   const FondsSolidariteContribution({
     this.previousHash,
     required this.hash,
@@ -7967,6 +10903,7 @@ class FondsSolidariteContribution extends DataClass
     required this.motif,
     required this.recordedByPhone,
     required this.recordedAt,
+    this.cotisationExceptionnelleId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7987,6 +10924,11 @@ class FondsSolidariteContribution extends DataClass
     map['motif'] = Variable<String>(motif);
     map['recorded_by_phone'] = Variable<String>(recordedByPhone);
     map['recorded_at'] = Variable<DateTime>(recordedAt);
+    if (!nullToAbsent || cotisationExceptionnelleId != null) {
+      map['cotisation_exceptionnelle_id'] = Variable<String>(
+        cotisationExceptionnelleId,
+      );
+    }
     return map;
   }
 
@@ -8008,6 +10950,10 @@ class FondsSolidariteContribution extends DataClass
       motif: Value(motif),
       recordedByPhone: Value(recordedByPhone),
       recordedAt: Value(recordedAt),
+      cotisationExceptionnelleId:
+          cotisationExceptionnelleId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cotisationExceptionnelleId),
     );
   }
 
@@ -8029,6 +10975,9 @@ class FondsSolidariteContribution extends DataClass
       motif: serializer.fromJson<String>(json['motif']),
       recordedByPhone: serializer.fromJson<String>(json['recordedByPhone']),
       recordedAt: serializer.fromJson<DateTime>(json['recordedAt']),
+      cotisationExceptionnelleId: serializer.fromJson<String?>(
+        json['cotisationExceptionnelleId'],
+      ),
     );
   }
   @override
@@ -8047,6 +10996,9 @@ class FondsSolidariteContribution extends DataClass
       'motif': serializer.toJson<String>(motif),
       'recordedByPhone': serializer.toJson<String>(recordedByPhone),
       'recordedAt': serializer.toJson<DateTime>(recordedAt),
+      'cotisationExceptionnelleId': serializer.toJson<String?>(
+        cotisationExceptionnelleId,
+      ),
     };
   }
 
@@ -8063,6 +11015,7 @@ class FondsSolidariteContribution extends DataClass
     String? motif,
     String? recordedByPhone,
     DateTime? recordedAt,
+    Value<String?> cotisationExceptionnelleId = const Value.absent(),
   }) => FondsSolidariteContribution(
     previousHash: previousHash.present ? previousHash.value : this.previousHash,
     hash: hash ?? this.hash,
@@ -8076,6 +11029,9 @@ class FondsSolidariteContribution extends DataClass
     motif: motif ?? this.motif,
     recordedByPhone: recordedByPhone ?? this.recordedByPhone,
     recordedAt: recordedAt ?? this.recordedAt,
+    cotisationExceptionnelleId: cotisationExceptionnelleId.present
+        ? cotisationExceptionnelleId.value
+        : this.cotisationExceptionnelleId,
   );
   FondsSolidariteContribution copyWithCompanion(
     FondsSolidariteContributionsCompanion data,
@@ -8105,6 +11061,9 @@ class FondsSolidariteContribution extends DataClass
       recordedAt: data.recordedAt.present
           ? data.recordedAt.value
           : this.recordedAt,
+      cotisationExceptionnelleId: data.cotisationExceptionnelleId.present
+          ? data.cotisationExceptionnelleId.value
+          : this.cotisationExceptionnelleId,
     );
   }
 
@@ -8122,7 +11081,8 @@ class FondsSolidariteContribution extends DataClass
           ..write('montantFcfa: $montantFcfa, ')
           ..write('motif: $motif, ')
           ..write('recordedByPhone: $recordedByPhone, ')
-          ..write('recordedAt: $recordedAt')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('cotisationExceptionnelleId: $cotisationExceptionnelleId')
           ..write(')'))
         .toString();
   }
@@ -8141,6 +11101,7 @@ class FondsSolidariteContribution extends DataClass
     motif,
     recordedByPhone,
     recordedAt,
+    cotisationExceptionnelleId,
   );
   @override
   bool operator ==(Object other) =>
@@ -8157,7 +11118,8 @@ class FondsSolidariteContribution extends DataClass
           other.montantFcfa == this.montantFcfa &&
           other.motif == this.motif &&
           other.recordedByPhone == this.recordedByPhone &&
-          other.recordedAt == this.recordedAt);
+          other.recordedAt == this.recordedAt &&
+          other.cotisationExceptionnelleId == this.cotisationExceptionnelleId);
 }
 
 class FondsSolidariteContributionsCompanion
@@ -8174,6 +11136,7 @@ class FondsSolidariteContributionsCompanion
   final Value<String> motif;
   final Value<String> recordedByPhone;
   final Value<DateTime> recordedAt;
+  final Value<String?> cotisationExceptionnelleId;
   final Value<int> rowid;
   const FondsSolidariteContributionsCompanion({
     this.previousHash = const Value.absent(),
@@ -8188,6 +11151,7 @@ class FondsSolidariteContributionsCompanion
     this.motif = const Value.absent(),
     this.recordedByPhone = const Value.absent(),
     this.recordedAt = const Value.absent(),
+    this.cotisationExceptionnelleId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FondsSolidariteContributionsCompanion.insert({
@@ -8203,6 +11167,7 @@ class FondsSolidariteContributionsCompanion
     required String motif,
     required String recordedByPhone,
     this.recordedAt = const Value.absent(),
+    this.cotisationExceptionnelleId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : hash = Value(hash),
        id = Value(id),
@@ -8224,6 +11189,7 @@ class FondsSolidariteContributionsCompanion
     Expression<String>? motif,
     Expression<String>? recordedByPhone,
     Expression<DateTime>? recordedAt,
+    Expression<String>? cotisationExceptionnelleId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -8239,6 +11205,8 @@ class FondsSolidariteContributionsCompanion
       if (motif != null) 'motif': motif,
       if (recordedByPhone != null) 'recorded_by_phone': recordedByPhone,
       if (recordedAt != null) 'recorded_at': recordedAt,
+      if (cotisationExceptionnelleId != null)
+        'cotisation_exceptionnelle_id': cotisationExceptionnelleId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -8256,6 +11224,7 @@ class FondsSolidariteContributionsCompanion
     Value<String>? motif,
     Value<String>? recordedByPhone,
     Value<DateTime>? recordedAt,
+    Value<String?>? cotisationExceptionnelleId,
     Value<int>? rowid,
   }) {
     return FondsSolidariteContributionsCompanion(
@@ -8271,6 +11240,8 @@ class FondsSolidariteContributionsCompanion
       motif: motif ?? this.motif,
       recordedByPhone: recordedByPhone ?? this.recordedByPhone,
       recordedAt: recordedAt ?? this.recordedAt,
+      cotisationExceptionnelleId:
+          cotisationExceptionnelleId ?? this.cotisationExceptionnelleId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -8314,6 +11285,11 @@ class FondsSolidariteContributionsCompanion
     if (recordedAt.present) {
       map['recorded_at'] = Variable<DateTime>(recordedAt.value);
     }
+    if (cotisationExceptionnelleId.present) {
+      map['cotisation_exceptionnelle_id'] = Variable<String>(
+        cotisationExceptionnelleId.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -8335,6 +11311,4425 @@ class FondsSolidariteContributionsCompanion
           ..write('motif: $motif, ')
           ..write('recordedByPhone: $recordedByPhone, ')
           ..write('recordedAt: $recordedAt, ')
+          ..write('cotisationExceptionnelleId: $cotisationExceptionnelleId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $EcheancesTable extends Echeances
+    with TableInfo<$EcheancesTable, Echeance> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EcheancesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _previousHashMeta = const VerificationMeta(
+    'previousHash',
+  );
+  @override
+  late final GeneratedColumn<String> previousHash = GeneratedColumn<String>(
+    'previous_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hashMeta = const VerificationMeta('hash');
+  @override
+  late final GeneratedColumn<String> hash = GeneratedColumn<String>(
+    'hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES "groups" (id)',
+    ),
+  );
+  static const VerificationMeta _cycleIdMeta = const VerificationMeta(
+    'cycleId',
+  );
+  @override
+  late final GeneratedColumn<String> cycleId = GeneratedColumn<String>(
+    'cycle_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cycles (id)',
+    ),
+  );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<String> memberId = GeneratedColumn<String>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES members (id)',
+    ),
+  );
+  static const VerificationMeta _carnetNumeroMeta = const VerificationMeta(
+    'carnetNumero',
+  );
+  @override
+  late final GeneratedColumn<int> carnetNumero = GeneratedColumn<int>(
+    'carnet_numero',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _echeanceDateMeta = const VerificationMeta(
+    'echeanceDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> echeanceDate = GeneratedColumn<DateTime>(
+    'echeance_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montantDuFcfaMeta = const VerificationMeta(
+    'montantDuFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> montantDuFcfa = GeneratedColumn<int>(
+    'montant_du_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montantPayeFcfaMeta = const VerificationMeta(
+    'montantPayeFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> montantPayeFcfa = GeneratedColumn<int>(
+    'montant_paye_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _partsPayeesMeta = const VerificationMeta(
+    'partsPayees',
+  );
+  @override
+  late final GeneratedColumn<int> partsPayees = GeneratedColumn<int>(
+    'parts_payees',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _arrieresFcfaMeta = const VerificationMeta(
+    'arrieresFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> arrieresFcfa = GeneratedColumn<int>(
+    'arrieres_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _amendeFcfaMeta = const VerificationMeta(
+    'amendeFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> amendeFcfa = GeneratedColumn<int>(
+    'amende_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _statutMeta = const VerificationMeta('statut');
+  @override
+  late final GeneratedColumn<String> statut = GeneratedColumn<String>(
+    'statut',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cotisationIdMeta = const VerificationMeta(
+    'cotisationId',
+  );
+  @override
+  late final GeneratedColumn<String> cotisationId = GeneratedColumn<String>(
+    'cotisation_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cotisations (id)',
+    ),
+  );
+  static const VerificationMeta _amendeIdMeta = const VerificationMeta(
+    'amendeId',
+  );
+  @override
+  late final GeneratedColumn<String> amendeId = GeneratedColumn<String>(
+    'amende_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES amendes (id)',
+    ),
+  );
+  static const VerificationMeta _recordedByPhoneMeta = const VerificationMeta(
+    'recordedByPhone',
+  );
+  @override
+  late final GeneratedColumn<String> recordedByPhone = GeneratedColumn<String>(
+    'recorded_by_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordedAtMeta = const VerificationMeta(
+    'recordedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> recordedAt = GeneratedColumn<DateTime>(
+    'recorded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    carnetNumero,
+    echeanceDate,
+    montantDuFcfa,
+    montantPayeFcfa,
+    partsPayees,
+    arrieresFcfa,
+    amendeFcfa,
+    statut,
+    cotisationId,
+    amendeId,
+    recordedByPhone,
+    recordedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'echeances';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Echeance> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('previous_hash')) {
+      context.handle(
+        _previousHashMeta,
+        previousHash.isAcceptableOrUnknown(
+          data['previous_hash']!,
+          _previousHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hash')) {
+      context.handle(
+        _hashMeta,
+        hash.isAcceptableOrUnknown(data['hash']!, _hashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hashMeta);
+    }
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('cycle_id')) {
+      context.handle(
+        _cycleIdMeta,
+        cycleId.isAcceptableOrUnknown(data['cycle_id']!, _cycleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cycleIdMeta);
+    }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('carnet_numero')) {
+      context.handle(
+        _carnetNumeroMeta,
+        carnetNumero.isAcceptableOrUnknown(
+          data['carnet_numero']!,
+          _carnetNumeroMeta,
+        ),
+      );
+    }
+    if (data.containsKey('echeance_date')) {
+      context.handle(
+        _echeanceDateMeta,
+        echeanceDate.isAcceptableOrUnknown(
+          data['echeance_date']!,
+          _echeanceDateMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_echeanceDateMeta);
+    }
+    if (data.containsKey('montant_du_fcfa')) {
+      context.handle(
+        _montantDuFcfaMeta,
+        montantDuFcfa.isAcceptableOrUnknown(
+          data['montant_du_fcfa']!,
+          _montantDuFcfaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montantDuFcfaMeta);
+    }
+    if (data.containsKey('montant_paye_fcfa')) {
+      context.handle(
+        _montantPayeFcfaMeta,
+        montantPayeFcfa.isAcceptableOrUnknown(
+          data['montant_paye_fcfa']!,
+          _montantPayeFcfaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('parts_payees')) {
+      context.handle(
+        _partsPayeesMeta,
+        partsPayees.isAcceptableOrUnknown(
+          data['parts_payees']!,
+          _partsPayeesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('arrieres_fcfa')) {
+      context.handle(
+        _arrieresFcfaMeta,
+        arrieresFcfa.isAcceptableOrUnknown(
+          data['arrieres_fcfa']!,
+          _arrieresFcfaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('amende_fcfa')) {
+      context.handle(
+        _amendeFcfaMeta,
+        amendeFcfa.isAcceptableOrUnknown(data['amende_fcfa']!, _amendeFcfaMeta),
+      );
+    }
+    if (data.containsKey('statut')) {
+      context.handle(
+        _statutMeta,
+        statut.isAcceptableOrUnknown(data['statut']!, _statutMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statutMeta);
+    }
+    if (data.containsKey('cotisation_id')) {
+      context.handle(
+        _cotisationIdMeta,
+        cotisationId.isAcceptableOrUnknown(
+          data['cotisation_id']!,
+          _cotisationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('amende_id')) {
+      context.handle(
+        _amendeIdMeta,
+        amendeId.isAcceptableOrUnknown(data['amende_id']!, _amendeIdMeta),
+      );
+    }
+    if (data.containsKey('recorded_by_phone')) {
+      context.handle(
+        _recordedByPhoneMeta,
+        recordedByPhone.isAcceptableOrUnknown(
+          data['recorded_by_phone']!,
+          _recordedByPhoneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recordedByPhoneMeta);
+    }
+    if (data.containsKey('recorded_at')) {
+      context.handle(
+        _recordedAtMeta,
+        recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Echeance map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Echeance(
+      previousHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_hash'],
+      ),
+      hash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hash'],
+      )!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      cycleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_id'],
+      )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}member_id'],
+      )!,
+      carnetNumero: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}carnet_numero'],
+      )!,
+      echeanceDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}echeance_date'],
+      )!,
+      montantDuFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_du_fcfa'],
+      )!,
+      montantPayeFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_paye_fcfa'],
+      )!,
+      partsPayees: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}parts_payees'],
+      )!,
+      arrieresFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}arrieres_fcfa'],
+      )!,
+      amendeFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}amende_fcfa'],
+      )!,
+      statut: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}statut'],
+      )!,
+      cotisationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cotisation_id'],
+      ),
+      amendeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}amende_id'],
+      ),
+      recordedByPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recorded_by_phone'],
+      )!,
+      recordedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recorded_at'],
+      )!,
+    );
+  }
+
+  @override
+  $EcheancesTable createAlias(String alias) {
+    return $EcheancesTable(attachedDatabase, alias);
+  }
+}
+
+class Echeance extends DataClass implements Insertable<Echeance> {
+  final String? previousHash;
+  final String hash;
+  final String id;
+  final String groupId;
+  final String cycleId;
+  final String memberId;
+  final int carnetNumero;
+  final DateTime echeanceDate;
+
+  /// Valeur d'une seule part — sert de référence pour le rythme minimum
+  /// attendu (1 part), pas un "montant dû" cumulable : voir la note de
+  /// classe, il n'y a plus d'arriéré à calculer.
+  final int montantDuFcfa;
+  final int montantPayeFcfa;
+
+  /// Nombre de parts effectivement payées ce jour-là dans ce carnet (0
+  /// sur une ligne `non_paye`, 1 à 5 sur une ligne `paye` — cumulé sur
+  /// la journée si plusieurs transactions, voir la note de classe).
+  final int partsPayees;
+
+  /// Vestige de l'ancien modèle avec rattrapage (avant le 2026-08-09) :
+  /// toujours 0 désormais, conservé uniquement pour ne pas casser les
+  /// lignes déjà écrites avant ce changement.
+  final int arrieresFcfa;
+  final int amendeFcfa;
+
+  /// paye | non_paye
+  final String statut;
+  final String? cotisationId;
+  final String? amendeId;
+  final String recordedByPhone;
+  final DateTime recordedAt;
+  const Echeance({
+    this.previousHash,
+    required this.hash,
+    required this.id,
+    required this.groupId,
+    required this.cycleId,
+    required this.memberId,
+    required this.carnetNumero,
+    required this.echeanceDate,
+    required this.montantDuFcfa,
+    required this.montantPayeFcfa,
+    required this.partsPayees,
+    required this.arrieresFcfa,
+    required this.amendeFcfa,
+    required this.statut,
+    this.cotisationId,
+    this.amendeId,
+    required this.recordedByPhone,
+    required this.recordedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || previousHash != null) {
+      map['previous_hash'] = Variable<String>(previousHash);
+    }
+    map['hash'] = Variable<String>(hash);
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['cycle_id'] = Variable<String>(cycleId);
+    map['member_id'] = Variable<String>(memberId);
+    map['carnet_numero'] = Variable<int>(carnetNumero);
+    map['echeance_date'] = Variable<DateTime>(echeanceDate);
+    map['montant_du_fcfa'] = Variable<int>(montantDuFcfa);
+    map['montant_paye_fcfa'] = Variable<int>(montantPayeFcfa);
+    map['parts_payees'] = Variable<int>(partsPayees);
+    map['arrieres_fcfa'] = Variable<int>(arrieresFcfa);
+    map['amende_fcfa'] = Variable<int>(amendeFcfa);
+    map['statut'] = Variable<String>(statut);
+    if (!nullToAbsent || cotisationId != null) {
+      map['cotisation_id'] = Variable<String>(cotisationId);
+    }
+    if (!nullToAbsent || amendeId != null) {
+      map['amende_id'] = Variable<String>(amendeId);
+    }
+    map['recorded_by_phone'] = Variable<String>(recordedByPhone);
+    map['recorded_at'] = Variable<DateTime>(recordedAt);
+    return map;
+  }
+
+  EcheancesCompanion toCompanion(bool nullToAbsent) {
+    return EcheancesCompanion(
+      previousHash: previousHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousHash),
+      hash: Value(hash),
+      id: Value(id),
+      groupId: Value(groupId),
+      cycleId: Value(cycleId),
+      memberId: Value(memberId),
+      carnetNumero: Value(carnetNumero),
+      echeanceDate: Value(echeanceDate),
+      montantDuFcfa: Value(montantDuFcfa),
+      montantPayeFcfa: Value(montantPayeFcfa),
+      partsPayees: Value(partsPayees),
+      arrieresFcfa: Value(arrieresFcfa),
+      amendeFcfa: Value(amendeFcfa),
+      statut: Value(statut),
+      cotisationId: cotisationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cotisationId),
+      amendeId: amendeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(amendeId),
+      recordedByPhone: Value(recordedByPhone),
+      recordedAt: Value(recordedAt),
+    );
+  }
+
+  factory Echeance.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Echeance(
+      previousHash: serializer.fromJson<String?>(json['previousHash']),
+      hash: serializer.fromJson<String>(json['hash']),
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      cycleId: serializer.fromJson<String>(json['cycleId']),
+      memberId: serializer.fromJson<String>(json['memberId']),
+      carnetNumero: serializer.fromJson<int>(json['carnetNumero']),
+      echeanceDate: serializer.fromJson<DateTime>(json['echeanceDate']),
+      montantDuFcfa: serializer.fromJson<int>(json['montantDuFcfa']),
+      montantPayeFcfa: serializer.fromJson<int>(json['montantPayeFcfa']),
+      partsPayees: serializer.fromJson<int>(json['partsPayees']),
+      arrieresFcfa: serializer.fromJson<int>(json['arrieresFcfa']),
+      amendeFcfa: serializer.fromJson<int>(json['amendeFcfa']),
+      statut: serializer.fromJson<String>(json['statut']),
+      cotisationId: serializer.fromJson<String?>(json['cotisationId']),
+      amendeId: serializer.fromJson<String?>(json['amendeId']),
+      recordedByPhone: serializer.fromJson<String>(json['recordedByPhone']),
+      recordedAt: serializer.fromJson<DateTime>(json['recordedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'previousHash': serializer.toJson<String?>(previousHash),
+      'hash': serializer.toJson<String>(hash),
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'cycleId': serializer.toJson<String>(cycleId),
+      'memberId': serializer.toJson<String>(memberId),
+      'carnetNumero': serializer.toJson<int>(carnetNumero),
+      'echeanceDate': serializer.toJson<DateTime>(echeanceDate),
+      'montantDuFcfa': serializer.toJson<int>(montantDuFcfa),
+      'montantPayeFcfa': serializer.toJson<int>(montantPayeFcfa),
+      'partsPayees': serializer.toJson<int>(partsPayees),
+      'arrieresFcfa': serializer.toJson<int>(arrieresFcfa),
+      'amendeFcfa': serializer.toJson<int>(amendeFcfa),
+      'statut': serializer.toJson<String>(statut),
+      'cotisationId': serializer.toJson<String?>(cotisationId),
+      'amendeId': serializer.toJson<String?>(amendeId),
+      'recordedByPhone': serializer.toJson<String>(recordedByPhone),
+      'recordedAt': serializer.toJson<DateTime>(recordedAt),
+    };
+  }
+
+  Echeance copyWith({
+    Value<String?> previousHash = const Value.absent(),
+    String? hash,
+    String? id,
+    String? groupId,
+    String? cycleId,
+    String? memberId,
+    int? carnetNumero,
+    DateTime? echeanceDate,
+    int? montantDuFcfa,
+    int? montantPayeFcfa,
+    int? partsPayees,
+    int? arrieresFcfa,
+    int? amendeFcfa,
+    String? statut,
+    Value<String?> cotisationId = const Value.absent(),
+    Value<String?> amendeId = const Value.absent(),
+    String? recordedByPhone,
+    DateTime? recordedAt,
+  }) => Echeance(
+    previousHash: previousHash.present ? previousHash.value : this.previousHash,
+    hash: hash ?? this.hash,
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    cycleId: cycleId ?? this.cycleId,
+    memberId: memberId ?? this.memberId,
+    carnetNumero: carnetNumero ?? this.carnetNumero,
+    echeanceDate: echeanceDate ?? this.echeanceDate,
+    montantDuFcfa: montantDuFcfa ?? this.montantDuFcfa,
+    montantPayeFcfa: montantPayeFcfa ?? this.montantPayeFcfa,
+    partsPayees: partsPayees ?? this.partsPayees,
+    arrieresFcfa: arrieresFcfa ?? this.arrieresFcfa,
+    amendeFcfa: amendeFcfa ?? this.amendeFcfa,
+    statut: statut ?? this.statut,
+    cotisationId: cotisationId.present ? cotisationId.value : this.cotisationId,
+    amendeId: amendeId.present ? amendeId.value : this.amendeId,
+    recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+    recordedAt: recordedAt ?? this.recordedAt,
+  );
+  Echeance copyWithCompanion(EcheancesCompanion data) {
+    return Echeance(
+      previousHash: data.previousHash.present
+          ? data.previousHash.value
+          : this.previousHash,
+      hash: data.hash.present ? data.hash.value : this.hash,
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      cycleId: data.cycleId.present ? data.cycleId.value : this.cycleId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      carnetNumero: data.carnetNumero.present
+          ? data.carnetNumero.value
+          : this.carnetNumero,
+      echeanceDate: data.echeanceDate.present
+          ? data.echeanceDate.value
+          : this.echeanceDate,
+      montantDuFcfa: data.montantDuFcfa.present
+          ? data.montantDuFcfa.value
+          : this.montantDuFcfa,
+      montantPayeFcfa: data.montantPayeFcfa.present
+          ? data.montantPayeFcfa.value
+          : this.montantPayeFcfa,
+      partsPayees: data.partsPayees.present
+          ? data.partsPayees.value
+          : this.partsPayees,
+      arrieresFcfa: data.arrieresFcfa.present
+          ? data.arrieresFcfa.value
+          : this.arrieresFcfa,
+      amendeFcfa: data.amendeFcfa.present
+          ? data.amendeFcfa.value
+          : this.amendeFcfa,
+      statut: data.statut.present ? data.statut.value : this.statut,
+      cotisationId: data.cotisationId.present
+          ? data.cotisationId.value
+          : this.cotisationId,
+      amendeId: data.amendeId.present ? data.amendeId.value : this.amendeId,
+      recordedByPhone: data.recordedByPhone.present
+          ? data.recordedByPhone.value
+          : this.recordedByPhone,
+      recordedAt: data.recordedAt.present
+          ? data.recordedAt.value
+          : this.recordedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Echeance(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('carnetNumero: $carnetNumero, ')
+          ..write('echeanceDate: $echeanceDate, ')
+          ..write('montantDuFcfa: $montantDuFcfa, ')
+          ..write('montantPayeFcfa: $montantPayeFcfa, ')
+          ..write('partsPayees: $partsPayees, ')
+          ..write('arrieresFcfa: $arrieresFcfa, ')
+          ..write('amendeFcfa: $amendeFcfa, ')
+          ..write('statut: $statut, ')
+          ..write('cotisationId: $cotisationId, ')
+          ..write('amendeId: $amendeId, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('recordedAt: $recordedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    carnetNumero,
+    echeanceDate,
+    montantDuFcfa,
+    montantPayeFcfa,
+    partsPayees,
+    arrieresFcfa,
+    amendeFcfa,
+    statut,
+    cotisationId,
+    amendeId,
+    recordedByPhone,
+    recordedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Echeance &&
+          other.previousHash == this.previousHash &&
+          other.hash == this.hash &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.cycleId == this.cycleId &&
+          other.memberId == this.memberId &&
+          other.carnetNumero == this.carnetNumero &&
+          other.echeanceDate == this.echeanceDate &&
+          other.montantDuFcfa == this.montantDuFcfa &&
+          other.montantPayeFcfa == this.montantPayeFcfa &&
+          other.partsPayees == this.partsPayees &&
+          other.arrieresFcfa == this.arrieresFcfa &&
+          other.amendeFcfa == this.amendeFcfa &&
+          other.statut == this.statut &&
+          other.cotisationId == this.cotisationId &&
+          other.amendeId == this.amendeId &&
+          other.recordedByPhone == this.recordedByPhone &&
+          other.recordedAt == this.recordedAt);
+}
+
+class EcheancesCompanion extends UpdateCompanion<Echeance> {
+  final Value<String?> previousHash;
+  final Value<String> hash;
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> cycleId;
+  final Value<String> memberId;
+  final Value<int> carnetNumero;
+  final Value<DateTime> echeanceDate;
+  final Value<int> montantDuFcfa;
+  final Value<int> montantPayeFcfa;
+  final Value<int> partsPayees;
+  final Value<int> arrieresFcfa;
+  final Value<int> amendeFcfa;
+  final Value<String> statut;
+  final Value<String?> cotisationId;
+  final Value<String?> amendeId;
+  final Value<String> recordedByPhone;
+  final Value<DateTime> recordedAt;
+  final Value<int> rowid;
+  const EcheancesCompanion({
+    this.previousHash = const Value.absent(),
+    this.hash = const Value.absent(),
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.cycleId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.carnetNumero = const Value.absent(),
+    this.echeanceDate = const Value.absent(),
+    this.montantDuFcfa = const Value.absent(),
+    this.montantPayeFcfa = const Value.absent(),
+    this.partsPayees = const Value.absent(),
+    this.arrieresFcfa = const Value.absent(),
+    this.amendeFcfa = const Value.absent(),
+    this.statut = const Value.absent(),
+    this.cotisationId = const Value.absent(),
+    this.amendeId = const Value.absent(),
+    this.recordedByPhone = const Value.absent(),
+    this.recordedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EcheancesCompanion.insert({
+    this.previousHash = const Value.absent(),
+    required String hash,
+    required String id,
+    required String groupId,
+    required String cycleId,
+    required String memberId,
+    this.carnetNumero = const Value.absent(),
+    required DateTime echeanceDate,
+    required int montantDuFcfa,
+    this.montantPayeFcfa = const Value.absent(),
+    this.partsPayees = const Value.absent(),
+    this.arrieresFcfa = const Value.absent(),
+    this.amendeFcfa = const Value.absent(),
+    required String statut,
+    this.cotisationId = const Value.absent(),
+    this.amendeId = const Value.absent(),
+    required String recordedByPhone,
+    this.recordedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : hash = Value(hash),
+       id = Value(id),
+       groupId = Value(groupId),
+       cycleId = Value(cycleId),
+       memberId = Value(memberId),
+       echeanceDate = Value(echeanceDate),
+       montantDuFcfa = Value(montantDuFcfa),
+       statut = Value(statut),
+       recordedByPhone = Value(recordedByPhone);
+  static Insertable<Echeance> custom({
+    Expression<String>? previousHash,
+    Expression<String>? hash,
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? cycleId,
+    Expression<String>? memberId,
+    Expression<int>? carnetNumero,
+    Expression<DateTime>? echeanceDate,
+    Expression<int>? montantDuFcfa,
+    Expression<int>? montantPayeFcfa,
+    Expression<int>? partsPayees,
+    Expression<int>? arrieresFcfa,
+    Expression<int>? amendeFcfa,
+    Expression<String>? statut,
+    Expression<String>? cotisationId,
+    Expression<String>? amendeId,
+    Expression<String>? recordedByPhone,
+    Expression<DateTime>? recordedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (previousHash != null) 'previous_hash': previousHash,
+      if (hash != null) 'hash': hash,
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (cycleId != null) 'cycle_id': cycleId,
+      if (memberId != null) 'member_id': memberId,
+      if (carnetNumero != null) 'carnet_numero': carnetNumero,
+      if (echeanceDate != null) 'echeance_date': echeanceDate,
+      if (montantDuFcfa != null) 'montant_du_fcfa': montantDuFcfa,
+      if (montantPayeFcfa != null) 'montant_paye_fcfa': montantPayeFcfa,
+      if (partsPayees != null) 'parts_payees': partsPayees,
+      if (arrieresFcfa != null) 'arrieres_fcfa': arrieresFcfa,
+      if (amendeFcfa != null) 'amende_fcfa': amendeFcfa,
+      if (statut != null) 'statut': statut,
+      if (cotisationId != null) 'cotisation_id': cotisationId,
+      if (amendeId != null) 'amende_id': amendeId,
+      if (recordedByPhone != null) 'recorded_by_phone': recordedByPhone,
+      if (recordedAt != null) 'recorded_at': recordedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EcheancesCompanion copyWith({
+    Value<String?>? previousHash,
+    Value<String>? hash,
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? cycleId,
+    Value<String>? memberId,
+    Value<int>? carnetNumero,
+    Value<DateTime>? echeanceDate,
+    Value<int>? montantDuFcfa,
+    Value<int>? montantPayeFcfa,
+    Value<int>? partsPayees,
+    Value<int>? arrieresFcfa,
+    Value<int>? amendeFcfa,
+    Value<String>? statut,
+    Value<String?>? cotisationId,
+    Value<String?>? amendeId,
+    Value<String>? recordedByPhone,
+    Value<DateTime>? recordedAt,
+    Value<int>? rowid,
+  }) {
+    return EcheancesCompanion(
+      previousHash: previousHash ?? this.previousHash,
+      hash: hash ?? this.hash,
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      cycleId: cycleId ?? this.cycleId,
+      memberId: memberId ?? this.memberId,
+      carnetNumero: carnetNumero ?? this.carnetNumero,
+      echeanceDate: echeanceDate ?? this.echeanceDate,
+      montantDuFcfa: montantDuFcfa ?? this.montantDuFcfa,
+      montantPayeFcfa: montantPayeFcfa ?? this.montantPayeFcfa,
+      partsPayees: partsPayees ?? this.partsPayees,
+      arrieresFcfa: arrieresFcfa ?? this.arrieresFcfa,
+      amendeFcfa: amendeFcfa ?? this.amendeFcfa,
+      statut: statut ?? this.statut,
+      cotisationId: cotisationId ?? this.cotisationId,
+      amendeId: amendeId ?? this.amendeId,
+      recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+      recordedAt: recordedAt ?? this.recordedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (previousHash.present) {
+      map['previous_hash'] = Variable<String>(previousHash.value);
+    }
+    if (hash.present) {
+      map['hash'] = Variable<String>(hash.value);
+    }
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (cycleId.present) {
+      map['cycle_id'] = Variable<String>(cycleId.value);
+    }
+    if (memberId.present) {
+      map['member_id'] = Variable<String>(memberId.value);
+    }
+    if (carnetNumero.present) {
+      map['carnet_numero'] = Variable<int>(carnetNumero.value);
+    }
+    if (echeanceDate.present) {
+      map['echeance_date'] = Variable<DateTime>(echeanceDate.value);
+    }
+    if (montantDuFcfa.present) {
+      map['montant_du_fcfa'] = Variable<int>(montantDuFcfa.value);
+    }
+    if (montantPayeFcfa.present) {
+      map['montant_paye_fcfa'] = Variable<int>(montantPayeFcfa.value);
+    }
+    if (partsPayees.present) {
+      map['parts_payees'] = Variable<int>(partsPayees.value);
+    }
+    if (arrieresFcfa.present) {
+      map['arrieres_fcfa'] = Variable<int>(arrieresFcfa.value);
+    }
+    if (amendeFcfa.present) {
+      map['amende_fcfa'] = Variable<int>(amendeFcfa.value);
+    }
+    if (statut.present) {
+      map['statut'] = Variable<String>(statut.value);
+    }
+    if (cotisationId.present) {
+      map['cotisation_id'] = Variable<String>(cotisationId.value);
+    }
+    if (amendeId.present) {
+      map['amende_id'] = Variable<String>(amendeId.value);
+    }
+    if (recordedByPhone.present) {
+      map['recorded_by_phone'] = Variable<String>(recordedByPhone.value);
+    }
+    if (recordedAt.present) {
+      map['recorded_at'] = Variable<DateTime>(recordedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EcheancesCompanion(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('carnetNumero: $carnetNumero, ')
+          ..write('echeanceDate: $echeanceDate, ')
+          ..write('montantDuFcfa: $montantDuFcfa, ')
+          ..write('montantPayeFcfa: $montantPayeFcfa, ')
+          ..write('partsPayees: $partsPayees, ')
+          ..write('arrieresFcfa: $arrieresFcfa, ')
+          ..write('amendeFcfa: $amendeFcfa, ')
+          ..write('statut: $statut, ')
+          ..write('cotisationId: $cotisationId, ')
+          ..write('amendeId: $amendeId, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PartageDeductionsTable extends PartageDeductions
+    with TableInfo<$PartageDeductionsTable, PartageDeduction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PartageDeductionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _previousHashMeta = const VerificationMeta(
+    'previousHash',
+  );
+  @override
+  late final GeneratedColumn<String> previousHash = GeneratedColumn<String>(
+    'previous_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hashMeta = const VerificationMeta('hash');
+  @override
+  late final GeneratedColumn<String> hash = GeneratedColumn<String>(
+    'hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES "groups" (id)',
+    ),
+  );
+  static const VerificationMeta _cycleIdMeta = const VerificationMeta(
+    'cycleId',
+  );
+  @override
+  late final GeneratedColumn<String> cycleId = GeneratedColumn<String>(
+    'cycle_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cycles (id)',
+    ),
+  );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<String> memberId = GeneratedColumn<String>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES members (id)',
+    ),
+  );
+  static const VerificationMeta _montantBrutFcfaMeta = const VerificationMeta(
+    'montantBrutFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> montantBrutFcfa = GeneratedColumn<int>(
+    'montant_brut_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _detteFcfaMeta = const VerificationMeta(
+    'detteFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> detteFcfa = GeneratedColumn<int>(
+    'dette_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montantDeduitFcfaMeta = const VerificationMeta(
+    'montantDeduitFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> montantDeduitFcfa = GeneratedColumn<int>(
+    'montant_deduit_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montantNetFcfaMeta = const VerificationMeta(
+    'montantNetFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> montantNetFcfa = GeneratedColumn<int>(
+    'montant_net_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pertAvecFcfaMeta = const VerificationMeta(
+    'pertAvecFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> pertAvecFcfa = GeneratedColumn<int>(
+    'pert_avec_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _recordedByPhoneMeta = const VerificationMeta(
+    'recordedByPhone',
+  );
+  @override
+  late final GeneratedColumn<String> recordedByPhone = GeneratedColumn<String>(
+    'recorded_by_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordedAtMeta = const VerificationMeta(
+    'recordedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> recordedAt = GeneratedColumn<DateTime>(
+    'recorded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    montantBrutFcfa,
+    detteFcfa,
+    montantDeduitFcfa,
+    montantNetFcfa,
+    pertAvecFcfa,
+    recordedByPhone,
+    recordedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'partage_deductions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PartageDeduction> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('previous_hash')) {
+      context.handle(
+        _previousHashMeta,
+        previousHash.isAcceptableOrUnknown(
+          data['previous_hash']!,
+          _previousHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hash')) {
+      context.handle(
+        _hashMeta,
+        hash.isAcceptableOrUnknown(data['hash']!, _hashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hashMeta);
+    }
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('cycle_id')) {
+      context.handle(
+        _cycleIdMeta,
+        cycleId.isAcceptableOrUnknown(data['cycle_id']!, _cycleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cycleIdMeta);
+    }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('montant_brut_fcfa')) {
+      context.handle(
+        _montantBrutFcfaMeta,
+        montantBrutFcfa.isAcceptableOrUnknown(
+          data['montant_brut_fcfa']!,
+          _montantBrutFcfaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montantBrutFcfaMeta);
+    }
+    if (data.containsKey('dette_fcfa')) {
+      context.handle(
+        _detteFcfaMeta,
+        detteFcfa.isAcceptableOrUnknown(data['dette_fcfa']!, _detteFcfaMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_detteFcfaMeta);
+    }
+    if (data.containsKey('montant_deduit_fcfa')) {
+      context.handle(
+        _montantDeduitFcfaMeta,
+        montantDeduitFcfa.isAcceptableOrUnknown(
+          data['montant_deduit_fcfa']!,
+          _montantDeduitFcfaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montantDeduitFcfaMeta);
+    }
+    if (data.containsKey('montant_net_fcfa')) {
+      context.handle(
+        _montantNetFcfaMeta,
+        montantNetFcfa.isAcceptableOrUnknown(
+          data['montant_net_fcfa']!,
+          _montantNetFcfaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montantNetFcfaMeta);
+    }
+    if (data.containsKey('pert_avec_fcfa')) {
+      context.handle(
+        _pertAvecFcfaMeta,
+        pertAvecFcfa.isAcceptableOrUnknown(
+          data['pert_avec_fcfa']!,
+          _pertAvecFcfaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('recorded_by_phone')) {
+      context.handle(
+        _recordedByPhoneMeta,
+        recordedByPhone.isAcceptableOrUnknown(
+          data['recorded_by_phone']!,
+          _recordedByPhoneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recordedByPhoneMeta);
+    }
+    if (data.containsKey('recorded_at')) {
+      context.handle(
+        _recordedAtMeta,
+        recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PartageDeduction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PartageDeduction(
+      previousHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_hash'],
+      ),
+      hash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hash'],
+      )!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      cycleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_id'],
+      )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}member_id'],
+      )!,
+      montantBrutFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_brut_fcfa'],
+      )!,
+      detteFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dette_fcfa'],
+      )!,
+      montantDeduitFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_deduit_fcfa'],
+      )!,
+      montantNetFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_net_fcfa'],
+      )!,
+      pertAvecFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pert_avec_fcfa'],
+      )!,
+      recordedByPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recorded_by_phone'],
+      )!,
+      recordedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recorded_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PartageDeductionsTable createAlias(String alias) {
+    return $PartageDeductionsTable(attachedDatabase, alias);
+  }
+}
+
+class PartageDeduction extends DataClass
+    implements Insertable<PartageDeduction> {
+  final String? previousHash;
+  final String hash;
+  final String id;
+  final String groupId;
+  final String cycleId;
+  final String memberId;
+
+  /// Montant brut que le membre aurait dû percevoir avant déduction
+  /// (cotisation totale + bénéfice individuel — voir
+  /// EndOfCycleCalculator).
+  final int montantBrutFcfa;
+
+  /// Dette totale au moment du partage : arriéré de cotisation non
+  /// rattrapé + amendes non soldées + solde de prêt non remboursé.
+  final int detteFcfa;
+
+  /// min(montantBrutFcfa, detteFcfa).
+  final int montantDeduitFcfa;
+
+  /// montantBrutFcfa - montantDeduitFcfa (jamais négatif).
+  final int montantNetFcfa;
+
+  /// detteFcfa - montantDeduitFcfa : partie de la dette que le montant à
+  /// percevoir ne suffisait pas à couvrir, enregistrée comme perte pour
+  /// l'AVEC (0 si la dette a été intégralement couverte).
+  final int pertAvecFcfa;
+  final String recordedByPhone;
+  final DateTime recordedAt;
+  const PartageDeduction({
+    this.previousHash,
+    required this.hash,
+    required this.id,
+    required this.groupId,
+    required this.cycleId,
+    required this.memberId,
+    required this.montantBrutFcfa,
+    required this.detteFcfa,
+    required this.montantDeduitFcfa,
+    required this.montantNetFcfa,
+    required this.pertAvecFcfa,
+    required this.recordedByPhone,
+    required this.recordedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || previousHash != null) {
+      map['previous_hash'] = Variable<String>(previousHash);
+    }
+    map['hash'] = Variable<String>(hash);
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['cycle_id'] = Variable<String>(cycleId);
+    map['member_id'] = Variable<String>(memberId);
+    map['montant_brut_fcfa'] = Variable<int>(montantBrutFcfa);
+    map['dette_fcfa'] = Variable<int>(detteFcfa);
+    map['montant_deduit_fcfa'] = Variable<int>(montantDeduitFcfa);
+    map['montant_net_fcfa'] = Variable<int>(montantNetFcfa);
+    map['pert_avec_fcfa'] = Variable<int>(pertAvecFcfa);
+    map['recorded_by_phone'] = Variable<String>(recordedByPhone);
+    map['recorded_at'] = Variable<DateTime>(recordedAt);
+    return map;
+  }
+
+  PartageDeductionsCompanion toCompanion(bool nullToAbsent) {
+    return PartageDeductionsCompanion(
+      previousHash: previousHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousHash),
+      hash: Value(hash),
+      id: Value(id),
+      groupId: Value(groupId),
+      cycleId: Value(cycleId),
+      memberId: Value(memberId),
+      montantBrutFcfa: Value(montantBrutFcfa),
+      detteFcfa: Value(detteFcfa),
+      montantDeduitFcfa: Value(montantDeduitFcfa),
+      montantNetFcfa: Value(montantNetFcfa),
+      pertAvecFcfa: Value(pertAvecFcfa),
+      recordedByPhone: Value(recordedByPhone),
+      recordedAt: Value(recordedAt),
+    );
+  }
+
+  factory PartageDeduction.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PartageDeduction(
+      previousHash: serializer.fromJson<String?>(json['previousHash']),
+      hash: serializer.fromJson<String>(json['hash']),
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      cycleId: serializer.fromJson<String>(json['cycleId']),
+      memberId: serializer.fromJson<String>(json['memberId']),
+      montantBrutFcfa: serializer.fromJson<int>(json['montantBrutFcfa']),
+      detteFcfa: serializer.fromJson<int>(json['detteFcfa']),
+      montantDeduitFcfa: serializer.fromJson<int>(json['montantDeduitFcfa']),
+      montantNetFcfa: serializer.fromJson<int>(json['montantNetFcfa']),
+      pertAvecFcfa: serializer.fromJson<int>(json['pertAvecFcfa']),
+      recordedByPhone: serializer.fromJson<String>(json['recordedByPhone']),
+      recordedAt: serializer.fromJson<DateTime>(json['recordedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'previousHash': serializer.toJson<String?>(previousHash),
+      'hash': serializer.toJson<String>(hash),
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'cycleId': serializer.toJson<String>(cycleId),
+      'memberId': serializer.toJson<String>(memberId),
+      'montantBrutFcfa': serializer.toJson<int>(montantBrutFcfa),
+      'detteFcfa': serializer.toJson<int>(detteFcfa),
+      'montantDeduitFcfa': serializer.toJson<int>(montantDeduitFcfa),
+      'montantNetFcfa': serializer.toJson<int>(montantNetFcfa),
+      'pertAvecFcfa': serializer.toJson<int>(pertAvecFcfa),
+      'recordedByPhone': serializer.toJson<String>(recordedByPhone),
+      'recordedAt': serializer.toJson<DateTime>(recordedAt),
+    };
+  }
+
+  PartageDeduction copyWith({
+    Value<String?> previousHash = const Value.absent(),
+    String? hash,
+    String? id,
+    String? groupId,
+    String? cycleId,
+    String? memberId,
+    int? montantBrutFcfa,
+    int? detteFcfa,
+    int? montantDeduitFcfa,
+    int? montantNetFcfa,
+    int? pertAvecFcfa,
+    String? recordedByPhone,
+    DateTime? recordedAt,
+  }) => PartageDeduction(
+    previousHash: previousHash.present ? previousHash.value : this.previousHash,
+    hash: hash ?? this.hash,
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    cycleId: cycleId ?? this.cycleId,
+    memberId: memberId ?? this.memberId,
+    montantBrutFcfa: montantBrutFcfa ?? this.montantBrutFcfa,
+    detteFcfa: detteFcfa ?? this.detteFcfa,
+    montantDeduitFcfa: montantDeduitFcfa ?? this.montantDeduitFcfa,
+    montantNetFcfa: montantNetFcfa ?? this.montantNetFcfa,
+    pertAvecFcfa: pertAvecFcfa ?? this.pertAvecFcfa,
+    recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+    recordedAt: recordedAt ?? this.recordedAt,
+  );
+  PartageDeduction copyWithCompanion(PartageDeductionsCompanion data) {
+    return PartageDeduction(
+      previousHash: data.previousHash.present
+          ? data.previousHash.value
+          : this.previousHash,
+      hash: data.hash.present ? data.hash.value : this.hash,
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      cycleId: data.cycleId.present ? data.cycleId.value : this.cycleId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      montantBrutFcfa: data.montantBrutFcfa.present
+          ? data.montantBrutFcfa.value
+          : this.montantBrutFcfa,
+      detteFcfa: data.detteFcfa.present ? data.detteFcfa.value : this.detteFcfa,
+      montantDeduitFcfa: data.montantDeduitFcfa.present
+          ? data.montantDeduitFcfa.value
+          : this.montantDeduitFcfa,
+      montantNetFcfa: data.montantNetFcfa.present
+          ? data.montantNetFcfa.value
+          : this.montantNetFcfa,
+      pertAvecFcfa: data.pertAvecFcfa.present
+          ? data.pertAvecFcfa.value
+          : this.pertAvecFcfa,
+      recordedByPhone: data.recordedByPhone.present
+          ? data.recordedByPhone.value
+          : this.recordedByPhone,
+      recordedAt: data.recordedAt.present
+          ? data.recordedAt.value
+          : this.recordedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PartageDeduction(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('montantBrutFcfa: $montantBrutFcfa, ')
+          ..write('detteFcfa: $detteFcfa, ')
+          ..write('montantDeduitFcfa: $montantDeduitFcfa, ')
+          ..write('montantNetFcfa: $montantNetFcfa, ')
+          ..write('pertAvecFcfa: $pertAvecFcfa, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('recordedAt: $recordedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    montantBrutFcfa,
+    detteFcfa,
+    montantDeduitFcfa,
+    montantNetFcfa,
+    pertAvecFcfa,
+    recordedByPhone,
+    recordedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PartageDeduction &&
+          other.previousHash == this.previousHash &&
+          other.hash == this.hash &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.cycleId == this.cycleId &&
+          other.memberId == this.memberId &&
+          other.montantBrutFcfa == this.montantBrutFcfa &&
+          other.detteFcfa == this.detteFcfa &&
+          other.montantDeduitFcfa == this.montantDeduitFcfa &&
+          other.montantNetFcfa == this.montantNetFcfa &&
+          other.pertAvecFcfa == this.pertAvecFcfa &&
+          other.recordedByPhone == this.recordedByPhone &&
+          other.recordedAt == this.recordedAt);
+}
+
+class PartageDeductionsCompanion extends UpdateCompanion<PartageDeduction> {
+  final Value<String?> previousHash;
+  final Value<String> hash;
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> cycleId;
+  final Value<String> memberId;
+  final Value<int> montantBrutFcfa;
+  final Value<int> detteFcfa;
+  final Value<int> montantDeduitFcfa;
+  final Value<int> montantNetFcfa;
+  final Value<int> pertAvecFcfa;
+  final Value<String> recordedByPhone;
+  final Value<DateTime> recordedAt;
+  final Value<int> rowid;
+  const PartageDeductionsCompanion({
+    this.previousHash = const Value.absent(),
+    this.hash = const Value.absent(),
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.cycleId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.montantBrutFcfa = const Value.absent(),
+    this.detteFcfa = const Value.absent(),
+    this.montantDeduitFcfa = const Value.absent(),
+    this.montantNetFcfa = const Value.absent(),
+    this.pertAvecFcfa = const Value.absent(),
+    this.recordedByPhone = const Value.absent(),
+    this.recordedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PartageDeductionsCompanion.insert({
+    this.previousHash = const Value.absent(),
+    required String hash,
+    required String id,
+    required String groupId,
+    required String cycleId,
+    required String memberId,
+    required int montantBrutFcfa,
+    required int detteFcfa,
+    required int montantDeduitFcfa,
+    required int montantNetFcfa,
+    this.pertAvecFcfa = const Value.absent(),
+    required String recordedByPhone,
+    this.recordedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : hash = Value(hash),
+       id = Value(id),
+       groupId = Value(groupId),
+       cycleId = Value(cycleId),
+       memberId = Value(memberId),
+       montantBrutFcfa = Value(montantBrutFcfa),
+       detteFcfa = Value(detteFcfa),
+       montantDeduitFcfa = Value(montantDeduitFcfa),
+       montantNetFcfa = Value(montantNetFcfa),
+       recordedByPhone = Value(recordedByPhone);
+  static Insertable<PartageDeduction> custom({
+    Expression<String>? previousHash,
+    Expression<String>? hash,
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? cycleId,
+    Expression<String>? memberId,
+    Expression<int>? montantBrutFcfa,
+    Expression<int>? detteFcfa,
+    Expression<int>? montantDeduitFcfa,
+    Expression<int>? montantNetFcfa,
+    Expression<int>? pertAvecFcfa,
+    Expression<String>? recordedByPhone,
+    Expression<DateTime>? recordedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (previousHash != null) 'previous_hash': previousHash,
+      if (hash != null) 'hash': hash,
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (cycleId != null) 'cycle_id': cycleId,
+      if (memberId != null) 'member_id': memberId,
+      if (montantBrutFcfa != null) 'montant_brut_fcfa': montantBrutFcfa,
+      if (detteFcfa != null) 'dette_fcfa': detteFcfa,
+      if (montantDeduitFcfa != null) 'montant_deduit_fcfa': montantDeduitFcfa,
+      if (montantNetFcfa != null) 'montant_net_fcfa': montantNetFcfa,
+      if (pertAvecFcfa != null) 'pert_avec_fcfa': pertAvecFcfa,
+      if (recordedByPhone != null) 'recorded_by_phone': recordedByPhone,
+      if (recordedAt != null) 'recorded_at': recordedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PartageDeductionsCompanion copyWith({
+    Value<String?>? previousHash,
+    Value<String>? hash,
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? cycleId,
+    Value<String>? memberId,
+    Value<int>? montantBrutFcfa,
+    Value<int>? detteFcfa,
+    Value<int>? montantDeduitFcfa,
+    Value<int>? montantNetFcfa,
+    Value<int>? pertAvecFcfa,
+    Value<String>? recordedByPhone,
+    Value<DateTime>? recordedAt,
+    Value<int>? rowid,
+  }) {
+    return PartageDeductionsCompanion(
+      previousHash: previousHash ?? this.previousHash,
+      hash: hash ?? this.hash,
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      cycleId: cycleId ?? this.cycleId,
+      memberId: memberId ?? this.memberId,
+      montantBrutFcfa: montantBrutFcfa ?? this.montantBrutFcfa,
+      detteFcfa: detteFcfa ?? this.detteFcfa,
+      montantDeduitFcfa: montantDeduitFcfa ?? this.montantDeduitFcfa,
+      montantNetFcfa: montantNetFcfa ?? this.montantNetFcfa,
+      pertAvecFcfa: pertAvecFcfa ?? this.pertAvecFcfa,
+      recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+      recordedAt: recordedAt ?? this.recordedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (previousHash.present) {
+      map['previous_hash'] = Variable<String>(previousHash.value);
+    }
+    if (hash.present) {
+      map['hash'] = Variable<String>(hash.value);
+    }
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (cycleId.present) {
+      map['cycle_id'] = Variable<String>(cycleId.value);
+    }
+    if (memberId.present) {
+      map['member_id'] = Variable<String>(memberId.value);
+    }
+    if (montantBrutFcfa.present) {
+      map['montant_brut_fcfa'] = Variable<int>(montantBrutFcfa.value);
+    }
+    if (detteFcfa.present) {
+      map['dette_fcfa'] = Variable<int>(detteFcfa.value);
+    }
+    if (montantDeduitFcfa.present) {
+      map['montant_deduit_fcfa'] = Variable<int>(montantDeduitFcfa.value);
+    }
+    if (montantNetFcfa.present) {
+      map['montant_net_fcfa'] = Variable<int>(montantNetFcfa.value);
+    }
+    if (pertAvecFcfa.present) {
+      map['pert_avec_fcfa'] = Variable<int>(pertAvecFcfa.value);
+    }
+    if (recordedByPhone.present) {
+      map['recorded_by_phone'] = Variable<String>(recordedByPhone.value);
+    }
+    if (recordedAt.present) {
+      map['recorded_at'] = Variable<DateTime>(recordedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PartageDeductionsCompanion(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('montantBrutFcfa: $montantBrutFcfa, ')
+          ..write('detteFcfa: $detteFcfa, ')
+          ..write('montantDeduitFcfa: $montantDeduitFcfa, ')
+          ..write('montantNetFcfa: $montantNetFcfa, ')
+          ..write('pertAvecFcfa: $pertAvecFcfa, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('recordedAt: $recordedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SeancesCotisationTable extends SeancesCotisation
+    with TableInfo<$SeancesCotisationTable, SeancesCotisationData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SeancesCotisationTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _previousHashMeta = const VerificationMeta(
+    'previousHash',
+  );
+  @override
+  late final GeneratedColumn<String> previousHash = GeneratedColumn<String>(
+    'previous_hash',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hashMeta = const VerificationMeta('hash');
+  @override
+  late final GeneratedColumn<String> hash = GeneratedColumn<String>(
+    'hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES "groups" (id)',
+    ),
+  );
+  static const VerificationMeta _cycleIdMeta = const VerificationMeta(
+    'cycleId',
+  );
+  @override
+  late final GeneratedColumn<String> cycleId = GeneratedColumn<String>(
+    'cycle_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cycles (id)',
+    ),
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _clotureeParPhoneMeta = const VerificationMeta(
+    'clotureeParPhone',
+  );
+  @override
+  late final GeneratedColumn<String> clotureeParPhone = GeneratedColumn<String>(
+    'cloturee_par_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _clotureeAtMeta = const VerificationMeta(
+    'clotureeAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> clotureeAt = GeneratedColumn<DateTime>(
+    'cloturee_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    date,
+    clotureeParPhone,
+    clotureeAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'seances_cotisation';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SeancesCotisationData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('previous_hash')) {
+      context.handle(
+        _previousHashMeta,
+        previousHash.isAcceptableOrUnknown(
+          data['previous_hash']!,
+          _previousHashMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hash')) {
+      context.handle(
+        _hashMeta,
+        hash.isAcceptableOrUnknown(data['hash']!, _hashMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hashMeta);
+    }
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('cycle_id')) {
+      context.handle(
+        _cycleIdMeta,
+        cycleId.isAcceptableOrUnknown(data['cycle_id']!, _cycleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cycleIdMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('cloturee_par_phone')) {
+      context.handle(
+        _clotureeParPhoneMeta,
+        clotureeParPhone.isAcceptableOrUnknown(
+          data['cloturee_par_phone']!,
+          _clotureeParPhoneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_clotureeParPhoneMeta);
+    }
+    if (data.containsKey('cloturee_at')) {
+      context.handle(
+        _clotureeAtMeta,
+        clotureeAt.isAcceptableOrUnknown(data['cloturee_at']!, _clotureeAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {cycleId, date},
+  ];
+  @override
+  SeancesCotisationData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SeancesCotisationData(
+      previousHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_hash'],
+      ),
+      hash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hash'],
+      )!,
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      cycleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_id'],
+      )!,
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      )!,
+      clotureeParPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cloturee_par_phone'],
+      )!,
+      clotureeAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cloturee_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SeancesCotisationTable createAlias(String alias) {
+    return $SeancesCotisationTable(attachedDatabase, alias);
+  }
+}
+
+class SeancesCotisationData extends DataClass
+    implements Insertable<SeancesCotisationData> {
+  final String? previousHash;
+  final String hash;
+  final String id;
+  final String groupId;
+  final String cycleId;
+  final DateTime date;
+  final String clotureeParPhone;
+  final DateTime clotureeAt;
+  const SeancesCotisationData({
+    this.previousHash,
+    required this.hash,
+    required this.id,
+    required this.groupId,
+    required this.cycleId,
+    required this.date,
+    required this.clotureeParPhone,
+    required this.clotureeAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (!nullToAbsent || previousHash != null) {
+      map['previous_hash'] = Variable<String>(previousHash);
+    }
+    map['hash'] = Variable<String>(hash);
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['cycle_id'] = Variable<String>(cycleId);
+    map['date'] = Variable<DateTime>(date);
+    map['cloturee_par_phone'] = Variable<String>(clotureeParPhone);
+    map['cloturee_at'] = Variable<DateTime>(clotureeAt);
+    return map;
+  }
+
+  SeancesCotisationCompanion toCompanion(bool nullToAbsent) {
+    return SeancesCotisationCompanion(
+      previousHash: previousHash == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousHash),
+      hash: Value(hash),
+      id: Value(id),
+      groupId: Value(groupId),
+      cycleId: Value(cycleId),
+      date: Value(date),
+      clotureeParPhone: Value(clotureeParPhone),
+      clotureeAt: Value(clotureeAt),
+    );
+  }
+
+  factory SeancesCotisationData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SeancesCotisationData(
+      previousHash: serializer.fromJson<String?>(json['previousHash']),
+      hash: serializer.fromJson<String>(json['hash']),
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      cycleId: serializer.fromJson<String>(json['cycleId']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      clotureeParPhone: serializer.fromJson<String>(json['clotureeParPhone']),
+      clotureeAt: serializer.fromJson<DateTime>(json['clotureeAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'previousHash': serializer.toJson<String?>(previousHash),
+      'hash': serializer.toJson<String>(hash),
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'cycleId': serializer.toJson<String>(cycleId),
+      'date': serializer.toJson<DateTime>(date),
+      'clotureeParPhone': serializer.toJson<String>(clotureeParPhone),
+      'clotureeAt': serializer.toJson<DateTime>(clotureeAt),
+    };
+  }
+
+  SeancesCotisationData copyWith({
+    Value<String?> previousHash = const Value.absent(),
+    String? hash,
+    String? id,
+    String? groupId,
+    String? cycleId,
+    DateTime? date,
+    String? clotureeParPhone,
+    DateTime? clotureeAt,
+  }) => SeancesCotisationData(
+    previousHash: previousHash.present ? previousHash.value : this.previousHash,
+    hash: hash ?? this.hash,
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    cycleId: cycleId ?? this.cycleId,
+    date: date ?? this.date,
+    clotureeParPhone: clotureeParPhone ?? this.clotureeParPhone,
+    clotureeAt: clotureeAt ?? this.clotureeAt,
+  );
+  SeancesCotisationData copyWithCompanion(SeancesCotisationCompanion data) {
+    return SeancesCotisationData(
+      previousHash: data.previousHash.present
+          ? data.previousHash.value
+          : this.previousHash,
+      hash: data.hash.present ? data.hash.value : this.hash,
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      cycleId: data.cycleId.present ? data.cycleId.value : this.cycleId,
+      date: data.date.present ? data.date.value : this.date,
+      clotureeParPhone: data.clotureeParPhone.present
+          ? data.clotureeParPhone.value
+          : this.clotureeParPhone,
+      clotureeAt: data.clotureeAt.present
+          ? data.clotureeAt.value
+          : this.clotureeAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SeancesCotisationData(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('date: $date, ')
+          ..write('clotureeParPhone: $clotureeParPhone, ')
+          ..write('clotureeAt: $clotureeAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    previousHash,
+    hash,
+    id,
+    groupId,
+    cycleId,
+    date,
+    clotureeParPhone,
+    clotureeAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SeancesCotisationData &&
+          other.previousHash == this.previousHash &&
+          other.hash == this.hash &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.cycleId == this.cycleId &&
+          other.date == this.date &&
+          other.clotureeParPhone == this.clotureeParPhone &&
+          other.clotureeAt == this.clotureeAt);
+}
+
+class SeancesCotisationCompanion
+    extends UpdateCompanion<SeancesCotisationData> {
+  final Value<String?> previousHash;
+  final Value<String> hash;
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> cycleId;
+  final Value<DateTime> date;
+  final Value<String> clotureeParPhone;
+  final Value<DateTime> clotureeAt;
+  final Value<int> rowid;
+  const SeancesCotisationCompanion({
+    this.previousHash = const Value.absent(),
+    this.hash = const Value.absent(),
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.cycleId = const Value.absent(),
+    this.date = const Value.absent(),
+    this.clotureeParPhone = const Value.absent(),
+    this.clotureeAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SeancesCotisationCompanion.insert({
+    this.previousHash = const Value.absent(),
+    required String hash,
+    required String id,
+    required String groupId,
+    required String cycleId,
+    required DateTime date,
+    required String clotureeParPhone,
+    this.clotureeAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : hash = Value(hash),
+       id = Value(id),
+       groupId = Value(groupId),
+       cycleId = Value(cycleId),
+       date = Value(date),
+       clotureeParPhone = Value(clotureeParPhone);
+  static Insertable<SeancesCotisationData> custom({
+    Expression<String>? previousHash,
+    Expression<String>? hash,
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? cycleId,
+    Expression<DateTime>? date,
+    Expression<String>? clotureeParPhone,
+    Expression<DateTime>? clotureeAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (previousHash != null) 'previous_hash': previousHash,
+      if (hash != null) 'hash': hash,
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (cycleId != null) 'cycle_id': cycleId,
+      if (date != null) 'date': date,
+      if (clotureeParPhone != null) 'cloturee_par_phone': clotureeParPhone,
+      if (clotureeAt != null) 'cloturee_at': clotureeAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SeancesCotisationCompanion copyWith({
+    Value<String?>? previousHash,
+    Value<String>? hash,
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? cycleId,
+    Value<DateTime>? date,
+    Value<String>? clotureeParPhone,
+    Value<DateTime>? clotureeAt,
+    Value<int>? rowid,
+  }) {
+    return SeancesCotisationCompanion(
+      previousHash: previousHash ?? this.previousHash,
+      hash: hash ?? this.hash,
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      cycleId: cycleId ?? this.cycleId,
+      date: date ?? this.date,
+      clotureeParPhone: clotureeParPhone ?? this.clotureeParPhone,
+      clotureeAt: clotureeAt ?? this.clotureeAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (previousHash.present) {
+      map['previous_hash'] = Variable<String>(previousHash.value);
+    }
+    if (hash.present) {
+      map['hash'] = Variable<String>(hash.value);
+    }
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (cycleId.present) {
+      map['cycle_id'] = Variable<String>(cycleId.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (clotureeParPhone.present) {
+      map['cloturee_par_phone'] = Variable<String>(clotureeParPhone.value);
+    }
+    if (clotureeAt.present) {
+      map['cloturee_at'] = Variable<DateTime>(clotureeAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SeancesCotisationCompanion(')
+          ..write('previousHash: $previousHash, ')
+          ..write('hash: $hash, ')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('date: $date, ')
+          ..write('clotureeParPhone: $clotureeParPhone, ')
+          ..write('clotureeAt: $clotureeAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MotifsAmendeTable extends MotifsAmende
+    with TableInfo<$MotifsAmendeTable, MotifsAmendeData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MotifsAmendeTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES "groups" (id)',
+    ),
+  );
+  static const VerificationMeta _libelleMeta = const VerificationMeta(
+    'libelle',
+  );
+  @override
+  late final GeneratedColumn<String> libelle = GeneratedColumn<String>(
+    'libelle',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _montantFcfaMeta = const VerificationMeta(
+    'montantFcfa',
+  );
+  @override
+  late final GeneratedColumn<int> montantFcfa = GeneratedColumn<int>(
+    'montant_fcfa',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _codeSystemeMeta = const VerificationMeta(
+    'codeSysteme',
+  );
+  @override
+  late final GeneratedColumn<String> codeSysteme = GeneratedColumn<String>(
+    'code_systeme',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _actifMeta = const VerificationMeta('actif');
+  @override
+  late final GeneratedColumn<bool> actif = GeneratedColumn<bool>(
+    'actif',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("actif" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    groupId,
+    libelle,
+    montantFcfa,
+    description,
+    codeSysteme,
+    actif,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'motifs_amende';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MotifsAmendeData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('libelle')) {
+      context.handle(
+        _libelleMeta,
+        libelle.isAcceptableOrUnknown(data['libelle']!, _libelleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_libelleMeta);
+    }
+    if (data.containsKey('montant_fcfa')) {
+      context.handle(
+        _montantFcfaMeta,
+        montantFcfa.isAcceptableOrUnknown(
+          data['montant_fcfa']!,
+          _montantFcfaMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_montantFcfaMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('code_systeme')) {
+      context.handle(
+        _codeSystemeMeta,
+        codeSysteme.isAcceptableOrUnknown(
+          data['code_systeme']!,
+          _codeSystemeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('actif')) {
+      context.handle(
+        _actifMeta,
+        actif.isAcceptableOrUnknown(data['actif']!, _actifMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MotifsAmendeData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MotifsAmendeData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      libelle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}libelle'],
+      )!,
+      montantFcfa: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}montant_fcfa'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      codeSysteme: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code_systeme'],
+      ),
+      actif: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}actif'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $MotifsAmendeTable createAlias(String alias) {
+    return $MotifsAmendeTable(attachedDatabase, alias);
+  }
+}
+
+class MotifsAmendeData extends DataClass
+    implements Insertable<MotifsAmendeData> {
+  final String id;
+  final String groupId;
+  final String libelle;
+  final int montantFcfa;
+
+  /// Phrase courte en français simple expliquant le motif à l'agent
+  /// (ex. "Le membre n'est pas présent à la réunion.") — voir
+  /// DECISIONS.md, "Motifs d'amende prédéfinis".
+  final String? description;
+
+  /// Identifiant stable des 3 motifs système créés automatiquement à la
+  /// création du groupe (`absence`, `part_impayee`, `paye_par_tiers`) —
+  /// `null` pour un motif ajouté manuellement par le groupe. Sert à la
+  /// validation de cohérence entre motifs (voir
+  /// `AppDatabase.motifsApplicablesAuCarnet`) : reconnaître ces 3 motifs
+  /// même si leur libellé a été renommé.
+  final String? codeSysteme;
+
+  /// Faux = retiré du choix proposé pour une nouvelle amende, sans
+  /// toucher à l'historique (jamais une suppression — un motif déjà
+  /// utilisé reste visible dans l'écran de gestion, juste plus proposé
+  /// à la création).
+  final bool actif;
+  final DateTime createdAt;
+  const MotifsAmendeData({
+    required this.id,
+    required this.groupId,
+    required this.libelle,
+    required this.montantFcfa,
+    this.description,
+    this.codeSysteme,
+    required this.actif,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['libelle'] = Variable<String>(libelle);
+    map['montant_fcfa'] = Variable<int>(montantFcfa);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || codeSysteme != null) {
+      map['code_systeme'] = Variable<String>(codeSysteme);
+    }
+    map['actif'] = Variable<bool>(actif);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  MotifsAmendeCompanion toCompanion(bool nullToAbsent) {
+    return MotifsAmendeCompanion(
+      id: Value(id),
+      groupId: Value(groupId),
+      libelle: Value(libelle),
+      montantFcfa: Value(montantFcfa),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      codeSysteme: codeSysteme == null && nullToAbsent
+          ? const Value.absent()
+          : Value(codeSysteme),
+      actif: Value(actif),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory MotifsAmendeData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MotifsAmendeData(
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      libelle: serializer.fromJson<String>(json['libelle']),
+      montantFcfa: serializer.fromJson<int>(json['montantFcfa']),
+      description: serializer.fromJson<String?>(json['description']),
+      codeSysteme: serializer.fromJson<String?>(json['codeSysteme']),
+      actif: serializer.fromJson<bool>(json['actif']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'libelle': serializer.toJson<String>(libelle),
+      'montantFcfa': serializer.toJson<int>(montantFcfa),
+      'description': serializer.toJson<String?>(description),
+      'codeSysteme': serializer.toJson<String?>(codeSysteme),
+      'actif': serializer.toJson<bool>(actif),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  MotifsAmendeData copyWith({
+    String? id,
+    String? groupId,
+    String? libelle,
+    int? montantFcfa,
+    Value<String?> description = const Value.absent(),
+    Value<String?> codeSysteme = const Value.absent(),
+    bool? actif,
+    DateTime? createdAt,
+  }) => MotifsAmendeData(
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    libelle: libelle ?? this.libelle,
+    montantFcfa: montantFcfa ?? this.montantFcfa,
+    description: description.present ? description.value : this.description,
+    codeSysteme: codeSysteme.present ? codeSysteme.value : this.codeSysteme,
+    actif: actif ?? this.actif,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  MotifsAmendeData copyWithCompanion(MotifsAmendeCompanion data) {
+    return MotifsAmendeData(
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      libelle: data.libelle.present ? data.libelle.value : this.libelle,
+      montantFcfa: data.montantFcfa.present
+          ? data.montantFcfa.value
+          : this.montantFcfa,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      codeSysteme: data.codeSysteme.present
+          ? data.codeSysteme.value
+          : this.codeSysteme,
+      actif: data.actif.present ? data.actif.value : this.actif,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MotifsAmendeData(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('libelle: $libelle, ')
+          ..write('montantFcfa: $montantFcfa, ')
+          ..write('description: $description, ')
+          ..write('codeSysteme: $codeSysteme, ')
+          ..write('actif: $actif, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    groupId,
+    libelle,
+    montantFcfa,
+    description,
+    codeSysteme,
+    actif,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MotifsAmendeData &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.libelle == this.libelle &&
+          other.montantFcfa == this.montantFcfa &&
+          other.description == this.description &&
+          other.codeSysteme == this.codeSysteme &&
+          other.actif == this.actif &&
+          other.createdAt == this.createdAt);
+}
+
+class MotifsAmendeCompanion extends UpdateCompanion<MotifsAmendeData> {
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> libelle;
+  final Value<int> montantFcfa;
+  final Value<String?> description;
+  final Value<String?> codeSysteme;
+  final Value<bool> actif;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const MotifsAmendeCompanion({
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.libelle = const Value.absent(),
+    this.montantFcfa = const Value.absent(),
+    this.description = const Value.absent(),
+    this.codeSysteme = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MotifsAmendeCompanion.insert({
+    required String id,
+    required String groupId,
+    required String libelle,
+    required int montantFcfa,
+    this.description = const Value.absent(),
+    this.codeSysteme = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       groupId = Value(groupId),
+       libelle = Value(libelle),
+       montantFcfa = Value(montantFcfa);
+  static Insertable<MotifsAmendeData> custom({
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? libelle,
+    Expression<int>? montantFcfa,
+    Expression<String>? description,
+    Expression<String>? codeSysteme,
+    Expression<bool>? actif,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (libelle != null) 'libelle': libelle,
+      if (montantFcfa != null) 'montant_fcfa': montantFcfa,
+      if (description != null) 'description': description,
+      if (codeSysteme != null) 'code_systeme': codeSysteme,
+      if (actif != null) 'actif': actif,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MotifsAmendeCompanion copyWith({
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? libelle,
+    Value<int>? montantFcfa,
+    Value<String?>? description,
+    Value<String?>? codeSysteme,
+    Value<bool>? actif,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return MotifsAmendeCompanion(
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      libelle: libelle ?? this.libelle,
+      montantFcfa: montantFcfa ?? this.montantFcfa,
+      description: description ?? this.description,
+      codeSysteme: codeSysteme ?? this.codeSysteme,
+      actif: actif ?? this.actif,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (libelle.present) {
+      map['libelle'] = Variable<String>(libelle.value);
+    }
+    if (montantFcfa.present) {
+      map['montant_fcfa'] = Variable<int>(montantFcfa.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (codeSysteme.present) {
+      map['code_systeme'] = Variable<String>(codeSysteme.value);
+    }
+    if (actif.present) {
+      map['actif'] = Variable<bool>(actif.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MotifsAmendeCompanion(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('libelle: $libelle, ')
+          ..write('montantFcfa: $montantFcfa, ')
+          ..write('description: $description, ')
+          ..write('codeSysteme: $codeSysteme, ')
+          ..write('actif: $actif, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PartagePaiementConfirmationsTable extends PartagePaiementConfirmations
+    with
+        TableInfo<
+          $PartagePaiementConfirmationsTable,
+          PartagePaiementConfirmation
+        > {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PartagePaiementConfirmationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES "groups" (id)',
+    ),
+  );
+  static const VerificationMeta _cycleIdMeta = const VerificationMeta(
+    'cycleId',
+  );
+  @override
+  late final GeneratedColumn<String> cycleId = GeneratedColumn<String>(
+    'cycle_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cycles (id)',
+    ),
+  );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<String> memberId = GeneratedColumn<String>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES members (id)',
+    ),
+  );
+  static const VerificationMeta _confirmedAtMeta = const VerificationMeta(
+    'confirmedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> confirmedAt = GeneratedColumn<DateTime>(
+    'confirmed_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  static const VerificationMeta _confirmedByPhoneMeta = const VerificationMeta(
+    'confirmedByPhone',
+  );
+  @override
+  late final GeneratedColumn<String> confirmedByPhone = GeneratedColumn<String>(
+    'confirmed_by_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    confirmedAt,
+    confirmedByPhone,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'partage_paiement_confirmations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PartagePaiementConfirmation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('cycle_id')) {
+      context.handle(
+        _cycleIdMeta,
+        cycleId.isAcceptableOrUnknown(data['cycle_id']!, _cycleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cycleIdMeta);
+    }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('confirmed_at')) {
+      context.handle(
+        _confirmedAtMeta,
+        confirmedAt.isAcceptableOrUnknown(
+          data['confirmed_at']!,
+          _confirmedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('confirmed_by_phone')) {
+      context.handle(
+        _confirmedByPhoneMeta,
+        confirmedByPhone.isAcceptableOrUnknown(
+          data['confirmed_by_phone']!,
+          _confirmedByPhoneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_confirmedByPhoneMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {cycleId, memberId},
+  ];
+  @override
+  PartagePaiementConfirmation map(
+    Map<String, dynamic> data, {
+    String? tablePrefix,
+  }) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PartagePaiementConfirmation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      cycleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_id'],
+      )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}member_id'],
+      )!,
+      confirmedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}confirmed_at'],
+      )!,
+      confirmedByPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}confirmed_by_phone'],
+      )!,
+    );
+  }
+
+  @override
+  $PartagePaiementConfirmationsTable createAlias(String alias) {
+    return $PartagePaiementConfirmationsTable(attachedDatabase, alias);
+  }
+}
+
+class PartagePaiementConfirmation extends DataClass
+    implements Insertable<PartagePaiementConfirmation> {
+  final String id;
+  final String groupId;
+  final String cycleId;
+  final String memberId;
+  final DateTime confirmedAt;
+  final String confirmedByPhone;
+  const PartagePaiementConfirmation({
+    required this.id,
+    required this.groupId,
+    required this.cycleId,
+    required this.memberId,
+    required this.confirmedAt,
+    required this.confirmedByPhone,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['cycle_id'] = Variable<String>(cycleId);
+    map['member_id'] = Variable<String>(memberId);
+    map['confirmed_at'] = Variable<DateTime>(confirmedAt);
+    map['confirmed_by_phone'] = Variable<String>(confirmedByPhone);
+    return map;
+  }
+
+  PartagePaiementConfirmationsCompanion toCompanion(bool nullToAbsent) {
+    return PartagePaiementConfirmationsCompanion(
+      id: Value(id),
+      groupId: Value(groupId),
+      cycleId: Value(cycleId),
+      memberId: Value(memberId),
+      confirmedAt: Value(confirmedAt),
+      confirmedByPhone: Value(confirmedByPhone),
+    );
+  }
+
+  factory PartagePaiementConfirmation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PartagePaiementConfirmation(
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      cycleId: serializer.fromJson<String>(json['cycleId']),
+      memberId: serializer.fromJson<String>(json['memberId']),
+      confirmedAt: serializer.fromJson<DateTime>(json['confirmedAt']),
+      confirmedByPhone: serializer.fromJson<String>(json['confirmedByPhone']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'cycleId': serializer.toJson<String>(cycleId),
+      'memberId': serializer.toJson<String>(memberId),
+      'confirmedAt': serializer.toJson<DateTime>(confirmedAt),
+      'confirmedByPhone': serializer.toJson<String>(confirmedByPhone),
+    };
+  }
+
+  PartagePaiementConfirmation copyWith({
+    String? id,
+    String? groupId,
+    String? cycleId,
+    String? memberId,
+    DateTime? confirmedAt,
+    String? confirmedByPhone,
+  }) => PartagePaiementConfirmation(
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    cycleId: cycleId ?? this.cycleId,
+    memberId: memberId ?? this.memberId,
+    confirmedAt: confirmedAt ?? this.confirmedAt,
+    confirmedByPhone: confirmedByPhone ?? this.confirmedByPhone,
+  );
+  PartagePaiementConfirmation copyWithCompanion(
+    PartagePaiementConfirmationsCompanion data,
+  ) {
+    return PartagePaiementConfirmation(
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      cycleId: data.cycleId.present ? data.cycleId.value : this.cycleId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      confirmedAt: data.confirmedAt.present
+          ? data.confirmedAt.value
+          : this.confirmedAt,
+      confirmedByPhone: data.confirmedByPhone.present
+          ? data.confirmedByPhone.value
+          : this.confirmedByPhone,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PartagePaiementConfirmation(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('confirmedAt: $confirmedAt, ')
+          ..write('confirmedByPhone: $confirmedByPhone')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    confirmedAt,
+    confirmedByPhone,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PartagePaiementConfirmation &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.cycleId == this.cycleId &&
+          other.memberId == this.memberId &&
+          other.confirmedAt == this.confirmedAt &&
+          other.confirmedByPhone == this.confirmedByPhone);
+}
+
+class PartagePaiementConfirmationsCompanion
+    extends UpdateCompanion<PartagePaiementConfirmation> {
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> cycleId;
+  final Value<String> memberId;
+  final Value<DateTime> confirmedAt;
+  final Value<String> confirmedByPhone;
+  final Value<int> rowid;
+  const PartagePaiementConfirmationsCompanion({
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.cycleId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.confirmedAt = const Value.absent(),
+    this.confirmedByPhone = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PartagePaiementConfirmationsCompanion.insert({
+    required String id,
+    required String groupId,
+    required String cycleId,
+    required String memberId,
+    this.confirmedAt = const Value.absent(),
+    required String confirmedByPhone,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       groupId = Value(groupId),
+       cycleId = Value(cycleId),
+       memberId = Value(memberId),
+       confirmedByPhone = Value(confirmedByPhone);
+  static Insertable<PartagePaiementConfirmation> custom({
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? cycleId,
+    Expression<String>? memberId,
+    Expression<DateTime>? confirmedAt,
+    Expression<String>? confirmedByPhone,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (cycleId != null) 'cycle_id': cycleId,
+      if (memberId != null) 'member_id': memberId,
+      if (confirmedAt != null) 'confirmed_at': confirmedAt,
+      if (confirmedByPhone != null) 'confirmed_by_phone': confirmedByPhone,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PartagePaiementConfirmationsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? cycleId,
+    Value<String>? memberId,
+    Value<DateTime>? confirmedAt,
+    Value<String>? confirmedByPhone,
+    Value<int>? rowid,
+  }) {
+    return PartagePaiementConfirmationsCompanion(
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      cycleId: cycleId ?? this.cycleId,
+      memberId: memberId ?? this.memberId,
+      confirmedAt: confirmedAt ?? this.confirmedAt,
+      confirmedByPhone: confirmedByPhone ?? this.confirmedByPhone,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (cycleId.present) {
+      map['cycle_id'] = Variable<String>(cycleId.value);
+    }
+    if (memberId.present) {
+      map['member_id'] = Variable<String>(memberId.value);
+    }
+    if (confirmedAt.present) {
+      map['confirmed_at'] = Variable<DateTime>(confirmedAt.value);
+    }
+    if (confirmedByPhone.present) {
+      map['confirmed_by_phone'] = Variable<String>(confirmedByPhone.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PartagePaiementConfirmationsCompanion(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('confirmedAt: $confirmedAt, ')
+          ..write('confirmedByPhone: $confirmedByPhone, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CarnetsTable extends Carnets with TableInfo<$CarnetsTable, Carnet> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CarnetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES "groups" (id)',
+    ),
+  );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<String> memberId = GeneratedColumn<String>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES members (id)',
+    ),
+  );
+  static const VerificationMeta _carnetNumeroMeta = const VerificationMeta(
+    'carnetNumero',
+  );
+  @override
+  late final GeneratedColumn<int> carnetNumero = GeneratedColumn<int>(
+    'carnet_numero',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _numeroSerieMeta = const VerificationMeta(
+    'numeroSerie',
+  );
+  @override
+  late final GeneratedColumn<String> numeroSerie = GeneratedColumn<String>(
+    'numero_serie',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    groupId,
+    memberId,
+    carnetNumero,
+    numeroSerie,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'carnets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Carnet> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('carnet_numero')) {
+      context.handle(
+        _carnetNumeroMeta,
+        carnetNumero.isAcceptableOrUnknown(
+          data['carnet_numero']!,
+          _carnetNumeroMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_carnetNumeroMeta);
+    }
+    if (data.containsKey('numero_serie')) {
+      context.handle(
+        _numeroSerieMeta,
+        numeroSerie.isAcceptableOrUnknown(
+          data['numero_serie']!,
+          _numeroSerieMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_numeroSerieMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {memberId, carnetNumero},
+    {groupId, numeroSerie},
+  ];
+  @override
+  Carnet map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Carnet(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}member_id'],
+      )!,
+      carnetNumero: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}carnet_numero'],
+      )!,
+      numeroSerie: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}numero_serie'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CarnetsTable createAlias(String alias) {
+    return $CarnetsTable(attachedDatabase, alias);
+  }
+}
+
+class Carnet extends DataClass implements Insertable<Carnet> {
+  final String id;
+  final String groupId;
+  final String memberId;
+
+  /// 1 ou 2 — la position du carnet chez son membre, jamais réutilisée
+  /// comme identifiant affiché (voir [numeroSerie]).
+  final int carnetNumero;
+
+  /// Numéro de série affiché — format `C-001`, généré automatiquement
+  /// (prochain numéro disponible dans la séquence du groupe) ou saisi
+  /// manuellement par l'agent si le carnet physique en a déjà un.
+  final String numeroSerie;
+  final DateTime createdAt;
+  const Carnet({
+    required this.id,
+    required this.groupId,
+    required this.memberId,
+    required this.carnetNumero,
+    required this.numeroSerie,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['member_id'] = Variable<String>(memberId);
+    map['carnet_numero'] = Variable<int>(carnetNumero);
+    map['numero_serie'] = Variable<String>(numeroSerie);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CarnetsCompanion toCompanion(bool nullToAbsent) {
+    return CarnetsCompanion(
+      id: Value(id),
+      groupId: Value(groupId),
+      memberId: Value(memberId),
+      carnetNumero: Value(carnetNumero),
+      numeroSerie: Value(numeroSerie),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory Carnet.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Carnet(
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      memberId: serializer.fromJson<String>(json['memberId']),
+      carnetNumero: serializer.fromJson<int>(json['carnetNumero']),
+      numeroSerie: serializer.fromJson<String>(json['numeroSerie']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'memberId': serializer.toJson<String>(memberId),
+      'carnetNumero': serializer.toJson<int>(carnetNumero),
+      'numeroSerie': serializer.toJson<String>(numeroSerie),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  Carnet copyWith({
+    String? id,
+    String? groupId,
+    String? memberId,
+    int? carnetNumero,
+    String? numeroSerie,
+    DateTime? createdAt,
+  }) => Carnet(
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    memberId: memberId ?? this.memberId,
+    carnetNumero: carnetNumero ?? this.carnetNumero,
+    numeroSerie: numeroSerie ?? this.numeroSerie,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  Carnet copyWithCompanion(CarnetsCompanion data) {
+    return Carnet(
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      carnetNumero: data.carnetNumero.present
+          ? data.carnetNumero.value
+          : this.carnetNumero,
+      numeroSerie: data.numeroSerie.present
+          ? data.numeroSerie.value
+          : this.numeroSerie,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Carnet(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('memberId: $memberId, ')
+          ..write('carnetNumero: $carnetNumero, ')
+          ..write('numeroSerie: $numeroSerie, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, groupId, memberId, carnetNumero, numeroSerie, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Carnet &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.memberId == this.memberId &&
+          other.carnetNumero == this.carnetNumero &&
+          other.numeroSerie == this.numeroSerie &&
+          other.createdAt == this.createdAt);
+}
+
+class CarnetsCompanion extends UpdateCompanion<Carnet> {
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> memberId;
+  final Value<int> carnetNumero;
+  final Value<String> numeroSerie;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CarnetsCompanion({
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.carnetNumero = const Value.absent(),
+    this.numeroSerie = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CarnetsCompanion.insert({
+    required String id,
+    required String groupId,
+    required String memberId,
+    required int carnetNumero,
+    required String numeroSerie,
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       groupId = Value(groupId),
+       memberId = Value(memberId),
+       carnetNumero = Value(carnetNumero),
+       numeroSerie = Value(numeroSerie);
+  static Insertable<Carnet> custom({
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? memberId,
+    Expression<int>? carnetNumero,
+    Expression<String>? numeroSerie,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (memberId != null) 'member_id': memberId,
+      if (carnetNumero != null) 'carnet_numero': carnetNumero,
+      if (numeroSerie != null) 'numero_serie': numeroSerie,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CarnetsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? memberId,
+    Value<int>? carnetNumero,
+    Value<String>? numeroSerie,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CarnetsCompanion(
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      memberId: memberId ?? this.memberId,
+      carnetNumero: carnetNumero ?? this.carnetNumero,
+      numeroSerie: numeroSerie ?? this.numeroSerie,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (memberId.present) {
+      map['member_id'] = Variable<String>(memberId.value);
+    }
+    if (carnetNumero.present) {
+      map['carnet_numero'] = Variable<int>(carnetNumero.value);
+    }
+    if (numeroSerie.present) {
+      map['numero_serie'] = Variable<String>(numeroSerie.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CarnetsCompanion(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('memberId: $memberId, ')
+          ..write('carnetNumero: $carnetNumero, ')
+          ..write('numeroSerie: $numeroSerie, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PresenceAnticipeeTable extends PresenceAnticipee
+    with TableInfo<$PresenceAnticipeeTable, PresenceAnticipeeData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PresenceAnticipeeTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _groupIdMeta = const VerificationMeta(
+    'groupId',
+  );
+  @override
+  late final GeneratedColumn<String> groupId = GeneratedColumn<String>(
+    'group_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES "groups" (id)',
+    ),
+  );
+  static const VerificationMeta _cycleIdMeta = const VerificationMeta(
+    'cycleId',
+  );
+  @override
+  late final GeneratedColumn<String> cycleId = GeneratedColumn<String>(
+    'cycle_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES cycles (id)',
+    ),
+  );
+  static const VerificationMeta _memberIdMeta = const VerificationMeta(
+    'memberId',
+  );
+  @override
+  late final GeneratedColumn<String> memberId = GeneratedColumn<String>(
+    'member_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES members (id)',
+    ),
+  );
+  static const VerificationMeta _carnetNumeroMeta = const VerificationMeta(
+    'carnetNumero',
+  );
+  @override
+  late final GeneratedColumn<int> carnetNumero = GeneratedColumn<int>(
+    'carnet_numero',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _echeanceDateMeta = const VerificationMeta(
+    'echeanceDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> echeanceDate = GeneratedColumn<DateTime>(
+    'echeance_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _codeSystemeMeta = const VerificationMeta(
+    'codeSysteme',
+  );
+  @override
+  late final GeneratedColumn<String> codeSysteme = GeneratedColumn<String>(
+    'code_systeme',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordedByPhoneMeta = const VerificationMeta(
+    'recordedByPhone',
+  );
+  @override
+  late final GeneratedColumn<String> recordedByPhone = GeneratedColumn<String>(
+    'recorded_by_phone',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordedAtMeta = const VerificationMeta(
+    'recordedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> recordedAt = GeneratedColumn<DateTime>(
+    'recorded_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    carnetNumero,
+    echeanceDate,
+    codeSysteme,
+    recordedByPhone,
+    recordedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'presence_anticipee';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PresenceAnticipeeData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('group_id')) {
+      context.handle(
+        _groupIdMeta,
+        groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('cycle_id')) {
+      context.handle(
+        _cycleIdMeta,
+        cycleId.isAcceptableOrUnknown(data['cycle_id']!, _cycleIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cycleIdMeta);
+    }
+    if (data.containsKey('member_id')) {
+      context.handle(
+        _memberIdMeta,
+        memberId.isAcceptableOrUnknown(data['member_id']!, _memberIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_memberIdMeta);
+    }
+    if (data.containsKey('carnet_numero')) {
+      context.handle(
+        _carnetNumeroMeta,
+        carnetNumero.isAcceptableOrUnknown(
+          data['carnet_numero']!,
+          _carnetNumeroMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_carnetNumeroMeta);
+    }
+    if (data.containsKey('echeance_date')) {
+      context.handle(
+        _echeanceDateMeta,
+        echeanceDate.isAcceptableOrUnknown(
+          data['echeance_date']!,
+          _echeanceDateMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_echeanceDateMeta);
+    }
+    if (data.containsKey('code_systeme')) {
+      context.handle(
+        _codeSystemeMeta,
+        codeSysteme.isAcceptableOrUnknown(
+          data['code_systeme']!,
+          _codeSystemeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_codeSystemeMeta);
+    }
+    if (data.containsKey('recorded_by_phone')) {
+      context.handle(
+        _recordedByPhoneMeta,
+        recordedByPhone.isAcceptableOrUnknown(
+          data['recorded_by_phone']!,
+          _recordedByPhoneMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_recordedByPhoneMeta);
+    }
+    if (data.containsKey('recorded_at')) {
+      context.handle(
+        _recordedAtMeta,
+        recordedAt.isAcceptableOrUnknown(data['recorded_at']!, _recordedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recordedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {cycleId, memberId, carnetNumero, echeanceDate},
+  ];
+  @override
+  PresenceAnticipeeData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PresenceAnticipeeData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      groupId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}group_id'],
+      )!,
+      cycleId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cycle_id'],
+      )!,
+      memberId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}member_id'],
+      )!,
+      carnetNumero: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}carnet_numero'],
+      )!,
+      echeanceDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}echeance_date'],
+      )!,
+      codeSysteme: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code_systeme'],
+      )!,
+      recordedByPhone: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recorded_by_phone'],
+      )!,
+      recordedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}recorded_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PresenceAnticipeeTable createAlias(String alias) {
+    return $PresenceAnticipeeTable(attachedDatabase, alias);
+  }
+}
+
+class PresenceAnticipeeData extends DataClass
+    implements Insertable<PresenceAnticipeeData> {
+  final String id;
+  final String groupId;
+  final String cycleId;
+  final String memberId;
+  final int carnetNumero;
+  final DateTime echeanceDate;
+  final String codeSysteme;
+  final String recordedByPhone;
+  final DateTime recordedAt;
+  const PresenceAnticipeeData({
+    required this.id,
+    required this.groupId,
+    required this.cycleId,
+    required this.memberId,
+    required this.carnetNumero,
+    required this.echeanceDate,
+    required this.codeSysteme,
+    required this.recordedByPhone,
+    required this.recordedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['group_id'] = Variable<String>(groupId);
+    map['cycle_id'] = Variable<String>(cycleId);
+    map['member_id'] = Variable<String>(memberId);
+    map['carnet_numero'] = Variable<int>(carnetNumero);
+    map['echeance_date'] = Variable<DateTime>(echeanceDate);
+    map['code_systeme'] = Variable<String>(codeSysteme);
+    map['recorded_by_phone'] = Variable<String>(recordedByPhone);
+    map['recorded_at'] = Variable<DateTime>(recordedAt);
+    return map;
+  }
+
+  PresenceAnticipeeCompanion toCompanion(bool nullToAbsent) {
+    return PresenceAnticipeeCompanion(
+      id: Value(id),
+      groupId: Value(groupId),
+      cycleId: Value(cycleId),
+      memberId: Value(memberId),
+      carnetNumero: Value(carnetNumero),
+      echeanceDate: Value(echeanceDate),
+      codeSysteme: Value(codeSysteme),
+      recordedByPhone: Value(recordedByPhone),
+      recordedAt: Value(recordedAt),
+    );
+  }
+
+  factory PresenceAnticipeeData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PresenceAnticipeeData(
+      id: serializer.fromJson<String>(json['id']),
+      groupId: serializer.fromJson<String>(json['groupId']),
+      cycleId: serializer.fromJson<String>(json['cycleId']),
+      memberId: serializer.fromJson<String>(json['memberId']),
+      carnetNumero: serializer.fromJson<int>(json['carnetNumero']),
+      echeanceDate: serializer.fromJson<DateTime>(json['echeanceDate']),
+      codeSysteme: serializer.fromJson<String>(json['codeSysteme']),
+      recordedByPhone: serializer.fromJson<String>(json['recordedByPhone']),
+      recordedAt: serializer.fromJson<DateTime>(json['recordedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'groupId': serializer.toJson<String>(groupId),
+      'cycleId': serializer.toJson<String>(cycleId),
+      'memberId': serializer.toJson<String>(memberId),
+      'carnetNumero': serializer.toJson<int>(carnetNumero),
+      'echeanceDate': serializer.toJson<DateTime>(echeanceDate),
+      'codeSysteme': serializer.toJson<String>(codeSysteme),
+      'recordedByPhone': serializer.toJson<String>(recordedByPhone),
+      'recordedAt': serializer.toJson<DateTime>(recordedAt),
+    };
+  }
+
+  PresenceAnticipeeData copyWith({
+    String? id,
+    String? groupId,
+    String? cycleId,
+    String? memberId,
+    int? carnetNumero,
+    DateTime? echeanceDate,
+    String? codeSysteme,
+    String? recordedByPhone,
+    DateTime? recordedAt,
+  }) => PresenceAnticipeeData(
+    id: id ?? this.id,
+    groupId: groupId ?? this.groupId,
+    cycleId: cycleId ?? this.cycleId,
+    memberId: memberId ?? this.memberId,
+    carnetNumero: carnetNumero ?? this.carnetNumero,
+    echeanceDate: echeanceDate ?? this.echeanceDate,
+    codeSysteme: codeSysteme ?? this.codeSysteme,
+    recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+    recordedAt: recordedAt ?? this.recordedAt,
+  );
+  PresenceAnticipeeData copyWithCompanion(PresenceAnticipeeCompanion data) {
+    return PresenceAnticipeeData(
+      id: data.id.present ? data.id.value : this.id,
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      cycleId: data.cycleId.present ? data.cycleId.value : this.cycleId,
+      memberId: data.memberId.present ? data.memberId.value : this.memberId,
+      carnetNumero: data.carnetNumero.present
+          ? data.carnetNumero.value
+          : this.carnetNumero,
+      echeanceDate: data.echeanceDate.present
+          ? data.echeanceDate.value
+          : this.echeanceDate,
+      codeSysteme: data.codeSysteme.present
+          ? data.codeSysteme.value
+          : this.codeSysteme,
+      recordedByPhone: data.recordedByPhone.present
+          ? data.recordedByPhone.value
+          : this.recordedByPhone,
+      recordedAt: data.recordedAt.present
+          ? data.recordedAt.value
+          : this.recordedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PresenceAnticipeeData(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('carnetNumero: $carnetNumero, ')
+          ..write('echeanceDate: $echeanceDate, ')
+          ..write('codeSysteme: $codeSysteme, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('recordedAt: $recordedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    groupId,
+    cycleId,
+    memberId,
+    carnetNumero,
+    echeanceDate,
+    codeSysteme,
+    recordedByPhone,
+    recordedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PresenceAnticipeeData &&
+          other.id == this.id &&
+          other.groupId == this.groupId &&
+          other.cycleId == this.cycleId &&
+          other.memberId == this.memberId &&
+          other.carnetNumero == this.carnetNumero &&
+          other.echeanceDate == this.echeanceDate &&
+          other.codeSysteme == this.codeSysteme &&
+          other.recordedByPhone == this.recordedByPhone &&
+          other.recordedAt == this.recordedAt);
+}
+
+class PresenceAnticipeeCompanion
+    extends UpdateCompanion<PresenceAnticipeeData> {
+  final Value<String> id;
+  final Value<String> groupId;
+  final Value<String> cycleId;
+  final Value<String> memberId;
+  final Value<int> carnetNumero;
+  final Value<DateTime> echeanceDate;
+  final Value<String> codeSysteme;
+  final Value<String> recordedByPhone;
+  final Value<DateTime> recordedAt;
+  final Value<int> rowid;
+  const PresenceAnticipeeCompanion({
+    this.id = const Value.absent(),
+    this.groupId = const Value.absent(),
+    this.cycleId = const Value.absent(),
+    this.memberId = const Value.absent(),
+    this.carnetNumero = const Value.absent(),
+    this.echeanceDate = const Value.absent(),
+    this.codeSysteme = const Value.absent(),
+    this.recordedByPhone = const Value.absent(),
+    this.recordedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PresenceAnticipeeCompanion.insert({
+    required String id,
+    required String groupId,
+    required String cycleId,
+    required String memberId,
+    required int carnetNumero,
+    required DateTime echeanceDate,
+    required String codeSysteme,
+    required String recordedByPhone,
+    required DateTime recordedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       groupId = Value(groupId),
+       cycleId = Value(cycleId),
+       memberId = Value(memberId),
+       carnetNumero = Value(carnetNumero),
+       echeanceDate = Value(echeanceDate),
+       codeSysteme = Value(codeSysteme),
+       recordedByPhone = Value(recordedByPhone),
+       recordedAt = Value(recordedAt);
+  static Insertable<PresenceAnticipeeData> custom({
+    Expression<String>? id,
+    Expression<String>? groupId,
+    Expression<String>? cycleId,
+    Expression<String>? memberId,
+    Expression<int>? carnetNumero,
+    Expression<DateTime>? echeanceDate,
+    Expression<String>? codeSysteme,
+    Expression<String>? recordedByPhone,
+    Expression<DateTime>? recordedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (groupId != null) 'group_id': groupId,
+      if (cycleId != null) 'cycle_id': cycleId,
+      if (memberId != null) 'member_id': memberId,
+      if (carnetNumero != null) 'carnet_numero': carnetNumero,
+      if (echeanceDate != null) 'echeance_date': echeanceDate,
+      if (codeSysteme != null) 'code_systeme': codeSysteme,
+      if (recordedByPhone != null) 'recorded_by_phone': recordedByPhone,
+      if (recordedAt != null) 'recorded_at': recordedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PresenceAnticipeeCompanion copyWith({
+    Value<String>? id,
+    Value<String>? groupId,
+    Value<String>? cycleId,
+    Value<String>? memberId,
+    Value<int>? carnetNumero,
+    Value<DateTime>? echeanceDate,
+    Value<String>? codeSysteme,
+    Value<String>? recordedByPhone,
+    Value<DateTime>? recordedAt,
+    Value<int>? rowid,
+  }) {
+    return PresenceAnticipeeCompanion(
+      id: id ?? this.id,
+      groupId: groupId ?? this.groupId,
+      cycleId: cycleId ?? this.cycleId,
+      memberId: memberId ?? this.memberId,
+      carnetNumero: carnetNumero ?? this.carnetNumero,
+      echeanceDate: echeanceDate ?? this.echeanceDate,
+      codeSysteme: codeSysteme ?? this.codeSysteme,
+      recordedByPhone: recordedByPhone ?? this.recordedByPhone,
+      recordedAt: recordedAt ?? this.recordedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (groupId.present) {
+      map['group_id'] = Variable<String>(groupId.value);
+    }
+    if (cycleId.present) {
+      map['cycle_id'] = Variable<String>(cycleId.value);
+    }
+    if (memberId.present) {
+      map['member_id'] = Variable<String>(memberId.value);
+    }
+    if (carnetNumero.present) {
+      map['carnet_numero'] = Variable<int>(carnetNumero.value);
+    }
+    if (echeanceDate.present) {
+      map['echeance_date'] = Variable<DateTime>(echeanceDate.value);
+    }
+    if (codeSysteme.present) {
+      map['code_systeme'] = Variable<String>(codeSysteme.value);
+    }
+    if (recordedByPhone.present) {
+      map['recorded_by_phone'] = Variable<String>(recordedByPhone.value);
+    }
+    if (recordedAt.present) {
+      map['recorded_at'] = Variable<DateTime>(recordedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PresenceAnticipeeCompanion(')
+          ..write('id: $id, ')
+          ..write('groupId: $groupId, ')
+          ..write('cycleId: $cycleId, ')
+          ..write('memberId: $memberId, ')
+          ..write('carnetNumero: $carnetNumero, ')
+          ..write('echeanceDate: $echeanceDate, ')
+          ..write('codeSysteme: $codeSysteme, ')
+          ..write('recordedByPhone: $recordedByPhone, ')
+          ..write('recordedAt: $recordedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8354,6 +15749,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CyclesTable cycles = $CyclesTable(this);
   late final $CotisationsTable cotisations = $CotisationsTable(this);
   late final $CarnetsEngagesTable carnetsEngages = $CarnetsEngagesTable(this);
+  late final $PretDemandesTable pretDemandes = $PretDemandesTable(this);
   late final $PretsTable prets = $PretsTable(this);
   late final $PretConfirmationsTable pretConfirmations =
       $PretConfirmationsTable(this);
@@ -8362,11 +15758,30 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PretAnnulationsTable pretAnnulations = $PretAnnulationsTable(
     this,
   );
+  late final $PretDemandeRefusTable pretDemandeRefus = $PretDemandeRefusTable(
+    this,
+  );
   late final $AmendesTable amendes = $AmendesTable(this);
   late final $AmendeAnnulationsTable amendeAnnulations =
       $AmendeAnnulationsTable(this);
+  late final $AmendePaiementsTable amendePaiements = $AmendePaiementsTable(
+    this,
+  );
+  late final $CotisationsExceptionnellesTable cotisationsExceptionnelles =
+      $CotisationsExceptionnellesTable(this);
   late final $FondsSolidariteContributionsTable fondsSolidariteContributions =
       $FondsSolidariteContributionsTable(this);
+  late final $EcheancesTable echeances = $EcheancesTable(this);
+  late final $PartageDeductionsTable partageDeductions =
+      $PartageDeductionsTable(this);
+  late final $SeancesCotisationTable seancesCotisation =
+      $SeancesCotisationTable(this);
+  late final $MotifsAmendeTable motifsAmende = $MotifsAmendeTable(this);
+  late final $PartagePaiementConfirmationsTable partagePaiementConfirmations =
+      $PartagePaiementConfirmationsTable(this);
+  late final $CarnetsTable carnets = $CarnetsTable(this);
+  late final $PresenceAnticipeeTable presenceAnticipee =
+      $PresenceAnticipeeTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8379,13 +15794,24 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cycles,
     cotisations,
     carnetsEngages,
+    pretDemandes,
     prets,
     pretConfirmations,
     pretRemboursements,
     pretAnnulations,
+    pretDemandeRefus,
     amendes,
     amendeAnnulations,
+    amendePaiements,
+    cotisationsExceptionnelles,
     fondsSolidariteContributions,
+    echeances,
+    partageDeductions,
+    seancesCotisation,
+    motifsAmende,
+    partagePaiementConfirmations,
+    carnets,
+    presenceAnticipee,
   ];
 }
 
@@ -8398,6 +15824,8 @@ typedef $$GroupsTableCreateCompanionBuilder =
       Value<int?> paymentDayOfWeek,
       Value<int?> paymentDayOfMonth1,
       Value<int?> paymentDayOfMonth2,
+      Value<int> montantSolidariteObligatoireFcfa,
+      Value<int> montantAmendeSortieRougeFcfa,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -8410,6 +15838,8 @@ typedef $$GroupsTableUpdateCompanionBuilder =
       Value<int?> paymentDayOfWeek,
       Value<int?> paymentDayOfMonth1,
       Value<int?> paymentDayOfMonth2,
+      Value<int> montantSolidariteObligatoireFcfa,
+      Value<int> montantAmendeSortieRougeFcfa,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -8512,6 +15942,24 @@ final class $$GroupsTableReferences
     );
   }
 
+  static MultiTypedResultKey<$PretDemandesTable, List<PretDemande>>
+  _pretDemandesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.pretDemandes,
+    aliasName: 'groups__id__pret_demandes__group_id',
+  );
+
+  $$PretDemandesTableProcessedTableManager get pretDemandesRefs {
+    final manager = $$PretDemandesTableTableManager(
+      $_db,
+      $_db.pretDemandes,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pretDemandesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$PretsTable, List<Pret>> _pretsRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -8551,6 +15999,31 @@ final class $$GroupsTableReferences
   }
 
   static MultiTypedResultKey<
+    $CotisationsExceptionnellesTable,
+    List<CotisationsExceptionnelle>
+  >
+  _cotisationsExceptionnellesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.cotisationsExceptionnelles,
+        aliasName: 'groups__id__cotisations_exceptionnelles__group_id',
+      );
+
+  $$CotisationsExceptionnellesTableProcessedTableManager
+  get cotisationsExceptionnellesRefs {
+    final manager = $$CotisationsExceptionnellesTableTableManager(
+      $_db,
+      $_db.cotisationsExceptionnelles,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _cotisationsExceptionnellesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
     $FondsSolidariteContributionsTable,
     List<FondsSolidariteContribution>
   >
@@ -8569,6 +16042,155 @@ final class $$GroupsTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _fondsSolidariteContributionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$EcheancesTable, List<Echeance>>
+  _echeancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.echeances,
+    aliasName: 'groups__id__echeances__group_id',
+  );
+
+  $$EcheancesTableProcessedTableManager get echeancesRefs {
+    final manager = $$EcheancesTableTableManager(
+      $_db,
+      $_db.echeances,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_echeancesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$PartageDeductionsTable, List<PartageDeduction>>
+  _partageDeductionsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.partageDeductions,
+        aliasName: 'groups__id__partage_deductions__group_id',
+      );
+
+  $$PartageDeductionsTableProcessedTableManager get partageDeductionsRefs {
+    final manager = $$PartageDeductionsTableTableManager(
+      $_db,
+      $_db.partageDeductions,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _partageDeductionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $SeancesCotisationTable,
+    List<SeancesCotisationData>
+  >
+  _seancesCotisationRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.seancesCotisation,
+        aliasName: 'groups__id__seances_cotisation__group_id',
+      );
+
+  $$SeancesCotisationTableProcessedTableManager get seancesCotisationRefs {
+    final manager = $$SeancesCotisationTableTableManager(
+      $_db,
+      $_db.seancesCotisation,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _seancesCotisationRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$MotifsAmendeTable, List<MotifsAmendeData>>
+  _motifsAmendeRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.motifsAmende,
+    aliasName: 'groups__id__motifs_amende__group_id',
+  );
+
+  $$MotifsAmendeTableProcessedTableManager get motifsAmendeRefs {
+    final manager = $$MotifsAmendeTableTableManager(
+      $_db,
+      $_db.motifsAmende,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_motifsAmendeRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $PartagePaiementConfirmationsTable,
+    List<PartagePaiementConfirmation>
+  >
+  _partagePaiementConfirmationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.partagePaiementConfirmations,
+        aliasName: 'groups__id__partage_paiement_confirmations__group_id',
+      );
+
+  $$PartagePaiementConfirmationsTableProcessedTableManager
+  get partagePaiementConfirmationsRefs {
+    final manager = $$PartagePaiementConfirmationsTableTableManager(
+      $_db,
+      $_db.partagePaiementConfirmations,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _partagePaiementConfirmationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CarnetsTable, List<Carnet>> _carnetsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.carnets,
+    aliasName: 'groups__id__carnets__group_id',
+  );
+
+  $$CarnetsTableProcessedTableManager get carnetsRefs {
+    final manager = $$CarnetsTableTableManager(
+      $_db,
+      $_db.carnets,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_carnetsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $PresenceAnticipeeTable,
+    List<PresenceAnticipeeData>
+  >
+  _presenceAnticipeeRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.presenceAnticipee,
+        aliasName: 'groups__id__presence_anticipee__group_id',
+      );
+
+  $$PresenceAnticipeeTableProcessedTableManager get presenceAnticipeeRefs {
+    final manager = $$PresenceAnticipeeTableTableManager(
+      $_db,
+      $_db.presenceAnticipee,
+    ).filter((f) => f.groupId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _presenceAnticipeeRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -8617,6 +16239,16 @@ class $$GroupsTableFilterComposer
 
   ColumnFilters<int> get paymentDayOfMonth2 => $composableBuilder(
     column: $table.paymentDayOfMonth2,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantSolidariteObligatoireFcfa => $composableBuilder(
+    column: $table.montantSolidariteObligatoireFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantAmendeSortieRougeFcfa => $composableBuilder(
+    column: $table.montantAmendeSortieRougeFcfa,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8750,6 +16382,31 @@ class $$GroupsTableFilterComposer
     return f(composer);
   }
 
+  Expression<bool> pretDemandesRefs(
+    Expression<bool> Function($$PretDemandesTableFilterComposer f) f,
+  ) {
+    final $$PretDemandesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableFilterComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<bool> pretsRefs(
     Expression<bool> Function($$PretsTableFilterComposer f) f,
   ) {
@@ -8800,6 +16457,33 @@ class $$GroupsTableFilterComposer
     return f(composer);
   }
 
+  Expression<bool> cotisationsExceptionnellesRefs(
+    Expression<bool> Function($$CotisationsExceptionnellesTableFilterComposer f)
+    f,
+  ) {
+    final $$CotisationsExceptionnellesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.cotisationsExceptionnelles,
+          getReferencedColumn: (t) => t.groupId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CotisationsExceptionnellesTableFilterComposer(
+                $db: $db,
+                $table: $db.cotisationsExceptionnelles,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<bool> fondsSolidariteContributionsRefs(
     Expression<bool> Function(
       $$FondsSolidariteContributionsTableFilterComposer f,
@@ -8826,6 +16510,185 @@ class $$GroupsTableFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> echeancesRefs(
+    Expression<bool> Function($$EcheancesTableFilterComposer f) f,
+  ) {
+    final $$EcheancesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableFilterComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> partageDeductionsRefs(
+    Expression<bool> Function($$PartageDeductionsTableFilterComposer f) f,
+  ) {
+    final $$PartageDeductionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.partageDeductions,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartageDeductionsTableFilterComposer(
+            $db: $db,
+            $table: $db.partageDeductions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> seancesCotisationRefs(
+    Expression<bool> Function($$SeancesCotisationTableFilterComposer f) f,
+  ) {
+    final $$SeancesCotisationTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seancesCotisation,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeancesCotisationTableFilterComposer(
+            $db: $db,
+            $table: $db.seancesCotisation,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> motifsAmendeRefs(
+    Expression<bool> Function($$MotifsAmendeTableFilterComposer f) f,
+  ) {
+    final $$MotifsAmendeTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.motifsAmende,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MotifsAmendeTableFilterComposer(
+            $db: $db,
+            $table: $db.motifsAmende,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> partagePaiementConfirmationsRefs(
+    Expression<bool> Function(
+      $$PartagePaiementConfirmationsTableFilterComposer f,
+    )
+    f,
+  ) {
+    final $$PartagePaiementConfirmationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.partagePaiementConfirmations,
+          getReferencedColumn: (t) => t.groupId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PartagePaiementConfirmationsTableFilterComposer(
+                $db: $db,
+                $table: $db.partagePaiementConfirmations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> carnetsRefs(
+    Expression<bool> Function($$CarnetsTableFilterComposer f) f,
+  ) {
+    final $$CarnetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.carnets,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CarnetsTableFilterComposer(
+            $db: $db,
+            $table: $db.carnets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> presenceAnticipeeRefs(
+    Expression<bool> Function($$PresenceAnticipeeTableFilterComposer f) f,
+  ) {
+    final $$PresenceAnticipeeTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.presenceAnticipee,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PresenceAnticipeeTableFilterComposer(
+            $db: $db,
+            $table: $db.presenceAnticipee,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -8874,6 +16737,17 @@ class $$GroupsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get montantSolidariteObligatoireFcfa =>
+      $composableBuilder(
+        column: $table.montantSolidariteObligatoireFcfa,
+        builder: (column) => ColumnOrderings(column),
+      );
+
+  ColumnOrderings<int> get montantAmendeSortieRougeFcfa => $composableBuilder(
+    column: $table.montantAmendeSortieRougeFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -8917,6 +16791,17 @@ class $$GroupsTableAnnotationComposer
 
   GeneratedColumn<int> get paymentDayOfMonth2 => $composableBuilder(
     column: $table.paymentDayOfMonth2,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get montantSolidariteObligatoireFcfa =>
+      $composableBuilder(
+        column: $table.montantSolidariteObligatoireFcfa,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<int> get montantAmendeSortieRougeFcfa => $composableBuilder(
+    column: $table.montantAmendeSortieRougeFcfa,
     builder: (column) => column,
   );
 
@@ -9048,6 +16933,31 @@ class $$GroupsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> pretDemandesRefs<T extends Object>(
+    Expression<T> Function($$PretDemandesTableAnnotationComposer a) f,
+  ) {
+    final $$PretDemandesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> pretsRefs<T extends Object>(
     Expression<T> Function($$PretsTableAnnotationComposer a) f,
   ) {
@@ -9098,6 +17008,35 @@ class $$GroupsTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> cotisationsExceptionnellesRefs<T extends Object>(
+    Expression<T> Function(
+      $$CotisationsExceptionnellesTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$CotisationsExceptionnellesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.cotisationsExceptionnelles,
+          getReferencedColumn: (t) => t.groupId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CotisationsExceptionnellesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.cotisationsExceptionnelles,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> fondsSolidariteContributionsRefs<T extends Object>(
     Expression<T> Function(
       $$FondsSolidariteContributionsTableAnnotationComposer a,
@@ -9118,6 +17057,188 @@ class $$GroupsTableAnnotationComposer
               }) => $$FondsSolidariteContributionsTableAnnotationComposer(
                 $db: $db,
                 $table: $db.fondsSolidariteContributions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> echeancesRefs<T extends Object>(
+    Expression<T> Function($$EcheancesTableAnnotationComposer a) f,
+  ) {
+    final $$EcheancesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> partageDeductionsRefs<T extends Object>(
+    Expression<T> Function($$PartageDeductionsTableAnnotationComposer a) f,
+  ) {
+    final $$PartageDeductionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.partageDeductions,
+          getReferencedColumn: (t) => t.groupId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PartageDeductionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.partageDeductions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> seancesCotisationRefs<T extends Object>(
+    Expression<T> Function($$SeancesCotisationTableAnnotationComposer a) f,
+  ) {
+    final $$SeancesCotisationTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.seancesCotisation,
+          getReferencedColumn: (t) => t.groupId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SeancesCotisationTableAnnotationComposer(
+                $db: $db,
+                $table: $db.seancesCotisation,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> motifsAmendeRefs<T extends Object>(
+    Expression<T> Function($$MotifsAmendeTableAnnotationComposer a) f,
+  ) {
+    final $$MotifsAmendeTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.motifsAmende,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MotifsAmendeTableAnnotationComposer(
+            $db: $db,
+            $table: $db.motifsAmende,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> partagePaiementConfirmationsRefs<T extends Object>(
+    Expression<T> Function(
+      $$PartagePaiementConfirmationsTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$PartagePaiementConfirmationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.partagePaiementConfirmations,
+          getReferencedColumn: (t) => t.groupId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PartagePaiementConfirmationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.partagePaiementConfirmations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> carnetsRefs<T extends Object>(
+    Expression<T> Function($$CarnetsTableAnnotationComposer a) f,
+  ) {
+    final $$CarnetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.carnets,
+      getReferencedColumn: (t) => t.groupId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CarnetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.carnets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> presenceAnticipeeRefs<T extends Object>(
+    Expression<T> Function($$PresenceAnticipeeTableAnnotationComposer a) f,
+  ) {
+    final $$PresenceAnticipeeTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.presenceAnticipee,
+          getReferencedColumn: (t) => t.groupId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PresenceAnticipeeTableAnnotationComposer(
+                $db: $db,
+                $table: $db.presenceAnticipee,
                 $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
                 joinBuilder: joinBuilder,
                 $removeJoinBuilderFromRootComposer:
@@ -9147,9 +17268,18 @@ class $$GroupsTableTableManager
             bool cyclesRefs,
             bool cotisationsRefs,
             bool carnetsEngagesRefs,
+            bool pretDemandesRefs,
             bool pretsRefs,
             bool amendesRefs,
+            bool cotisationsExceptionnellesRefs,
             bool fondsSolidariteContributionsRefs,
+            bool echeancesRefs,
+            bool partageDeductionsRefs,
+            bool seancesCotisationRefs,
+            bool motifsAmendeRefs,
+            bool partagePaiementConfirmationsRefs,
+            bool carnetsRefs,
+            bool presenceAnticipeeRefs,
           })
         > {
   $$GroupsTableTableManager(_$AppDatabase db, $GroupsTable table)
@@ -9172,6 +17302,9 @@ class $$GroupsTableTableManager
                 Value<int?> paymentDayOfWeek = const Value.absent(),
                 Value<int?> paymentDayOfMonth1 = const Value.absent(),
                 Value<int?> paymentDayOfMonth2 = const Value.absent(),
+                Value<int> montantSolidariteObligatoireFcfa =
+                    const Value.absent(),
+                Value<int> montantAmendeSortieRougeFcfa = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => GroupsCompanion(
@@ -9182,6 +17315,9 @@ class $$GroupsTableTableManager
                 paymentDayOfWeek: paymentDayOfWeek,
                 paymentDayOfMonth1: paymentDayOfMonth1,
                 paymentDayOfMonth2: paymentDayOfMonth2,
+                montantSolidariteObligatoireFcfa:
+                    montantSolidariteObligatoireFcfa,
+                montantAmendeSortieRougeFcfa: montantAmendeSortieRougeFcfa,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -9194,6 +17330,9 @@ class $$GroupsTableTableManager
                 Value<int?> paymentDayOfWeek = const Value.absent(),
                 Value<int?> paymentDayOfMonth1 = const Value.absent(),
                 Value<int?> paymentDayOfMonth2 = const Value.absent(),
+                Value<int> montantSolidariteObligatoireFcfa =
+                    const Value.absent(),
+                Value<int> montantAmendeSortieRougeFcfa = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => GroupsCompanion.insert(
@@ -9204,6 +17343,9 @@ class $$GroupsTableTableManager
                 paymentDayOfWeek: paymentDayOfWeek,
                 paymentDayOfMonth1: paymentDayOfMonth1,
                 paymentDayOfMonth2: paymentDayOfMonth2,
+                montantSolidariteObligatoireFcfa:
+                    montantSolidariteObligatoireFcfa,
+                montantAmendeSortieRougeFcfa: montantAmendeSortieRougeFcfa,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -9220,9 +17362,18 @@ class $$GroupsTableTableManager
                 cyclesRefs = false,
                 cotisationsRefs = false,
                 carnetsEngagesRefs = false,
+                pretDemandesRefs = false,
                 pretsRefs = false,
                 amendesRefs = false,
+                cotisationsExceptionnellesRefs = false,
                 fondsSolidariteContributionsRefs = false,
+                echeancesRefs = false,
+                partageDeductionsRefs = false,
+                seancesCotisationRefs = false,
+                motifsAmendeRefs = false,
+                partagePaiementConfirmationsRefs = false,
+                carnetsRefs = false,
+                presenceAnticipeeRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -9232,10 +17383,21 @@ class $$GroupsTableTableManager
                     if (cyclesRefs) db.cycles,
                     if (cotisationsRefs) db.cotisations,
                     if (carnetsEngagesRefs) db.carnetsEngages,
+                    if (pretDemandesRefs) db.pretDemandes,
                     if (pretsRefs) db.prets,
                     if (amendesRefs) db.amendes,
+                    if (cotisationsExceptionnellesRefs)
+                      db.cotisationsExceptionnelles,
                     if (fondsSolidariteContributionsRefs)
                       db.fondsSolidariteContributions,
+                    if (echeancesRefs) db.echeances,
+                    if (partageDeductionsRefs) db.partageDeductions,
+                    if (seancesCotisationRefs) db.seancesCotisation,
+                    if (motifsAmendeRefs) db.motifsAmende,
+                    if (partagePaiementConfirmationsRefs)
+                      db.partagePaiementConfirmations,
+                    if (carnetsRefs) db.carnets,
+                    if (presenceAnticipeeRefs) db.presenceAnticipee,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -9333,6 +17495,27 @@ class $$GroupsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (pretDemandesRefs)
+                        await $_getPrefetchedData<
+                          Group,
+                          $GroupsTable,
+                          PretDemande
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupsTableReferences
+                              ._pretDemandesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pretDemandesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.groupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (pretsRefs)
                         await $_getPrefetchedData<Group, $GroupsTable, Pret>(
                           currentTable: table,
@@ -9363,6 +17546,27 @@ class $$GroupsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (cotisationsExceptionnellesRefs)
+                        await $_getPrefetchedData<
+                          Group,
+                          $GroupsTable,
+                          CotisationsExceptionnelle
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupsTableReferences
+                              ._cotisationsExceptionnellesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cotisationsExceptionnellesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.groupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (fondsSolidariteContributionsRefs)
                         await $_getPrefetchedData<
                           Group,
@@ -9378,6 +17582,149 @@ class $$GroupsTableTableManager
                                 table,
                                 p0,
                               ).fondsSolidariteContributionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.groupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (echeancesRefs)
+                        await $_getPrefetchedData<
+                          Group,
+                          $GroupsTable,
+                          Echeance
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupsTableReferences
+                              ._echeancesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).echeancesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.groupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (partageDeductionsRefs)
+                        await $_getPrefetchedData<
+                          Group,
+                          $GroupsTable,
+                          PartageDeduction
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupsTableReferences
+                              ._partageDeductionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).partageDeductionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.groupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (seancesCotisationRefs)
+                        await $_getPrefetchedData<
+                          Group,
+                          $GroupsTable,
+                          SeancesCotisationData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupsTableReferences
+                              ._seancesCotisationRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).seancesCotisationRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.groupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (motifsAmendeRefs)
+                        await $_getPrefetchedData<
+                          Group,
+                          $GroupsTable,
+                          MotifsAmendeData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupsTableReferences
+                              ._motifsAmendeRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).motifsAmendeRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.groupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (partagePaiementConfirmationsRefs)
+                        await $_getPrefetchedData<
+                          Group,
+                          $GroupsTable,
+                          PartagePaiementConfirmation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupsTableReferences
+                              ._partagePaiementConfirmationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).partagePaiementConfirmationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.groupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (carnetsRefs)
+                        await $_getPrefetchedData<Group, $GroupsTable, Carnet>(
+                          currentTable: table,
+                          referencedTable: $$GroupsTableReferences
+                              ._carnetsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).carnetsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.groupId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (presenceAnticipeeRefs)
+                        await $_getPrefetchedData<
+                          Group,
+                          $GroupsTable,
+                          PresenceAnticipeeData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GroupsTableReferences
+                              ._presenceAnticipeeRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GroupsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).presenceAnticipeeRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.groupId == item.id,
@@ -9410,9 +17757,18 @@ typedef $$GroupsTableProcessedTableManager =
         bool cyclesRefs,
         bool cotisationsRefs,
         bool carnetsEngagesRefs,
+        bool pretDemandesRefs,
         bool pretsRefs,
         bool amendesRefs,
+        bool cotisationsExceptionnellesRefs,
         bool fondsSolidariteContributionsRefs,
+        bool echeancesRefs,
+        bool partageDeductionsRefs,
+        bool seancesCotisationRefs,
+        bool motifsAmendeRefs,
+        bool partagePaiementConfirmationsRefs,
+        bool carnetsRefs,
+        bool presenceAnticipeeRefs,
       })
     >;
 typedef $$MembersTableCreateCompanionBuilder =
@@ -9513,6 +17869,24 @@ final class $$MembersTableReferences
     );
   }
 
+  static MultiTypedResultKey<$PretDemandesTable, List<PretDemande>>
+  _pretDemandesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.pretDemandes,
+    aliasName: 'members__id__pret_demandes__member_id',
+  );
+
+  $$PretDemandesTableProcessedTableManager get pretDemandesRefs {
+    final manager = $$PretDemandesTableTableManager(
+      $_db,
+      $_db.pretDemandes,
+    ).filter((f) => f.memberId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pretDemandesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$PretsTable, List<Pret>> _pretsRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -9570,6 +17944,113 @@ final class $$MembersTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _fondsSolidariteContributionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$EcheancesTable, List<Echeance>>
+  _echeancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.echeances,
+    aliasName: 'members__id__echeances__member_id',
+  );
+
+  $$EcheancesTableProcessedTableManager get echeancesRefs {
+    final manager = $$EcheancesTableTableManager(
+      $_db,
+      $_db.echeances,
+    ).filter((f) => f.memberId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_echeancesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$PartageDeductionsTable, List<PartageDeduction>>
+  _partageDeductionsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.partageDeductions,
+        aliasName: 'members__id__partage_deductions__member_id',
+      );
+
+  $$PartageDeductionsTableProcessedTableManager get partageDeductionsRefs {
+    final manager = $$PartageDeductionsTableTableManager(
+      $_db,
+      $_db.partageDeductions,
+    ).filter((f) => f.memberId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _partageDeductionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $PartagePaiementConfirmationsTable,
+    List<PartagePaiementConfirmation>
+  >
+  _partagePaiementConfirmationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.partagePaiementConfirmations,
+        aliasName: 'members__id__partage_paiement_confirmations__member_id',
+      );
+
+  $$PartagePaiementConfirmationsTableProcessedTableManager
+  get partagePaiementConfirmationsRefs {
+    final manager = $$PartagePaiementConfirmationsTableTableManager(
+      $_db,
+      $_db.partagePaiementConfirmations,
+    ).filter((f) => f.memberId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _partagePaiementConfirmationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CarnetsTable, List<Carnet>> _carnetsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.carnets,
+    aliasName: 'members__id__carnets__member_id',
+  );
+
+  $$CarnetsTableProcessedTableManager get carnetsRefs {
+    final manager = $$CarnetsTableTableManager(
+      $_db,
+      $_db.carnets,
+    ).filter((f) => f.memberId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_carnetsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $PresenceAnticipeeTable,
+    List<PresenceAnticipeeData>
+  >
+  _presenceAnticipeeRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.presenceAnticipee,
+        aliasName: 'members__id__presence_anticipee__member_id',
+      );
+
+  $$PresenceAnticipeeTableProcessedTableManager get presenceAnticipeeRefs {
+    final manager = $$PresenceAnticipeeTableTableManager(
+      $_db,
+      $_db.presenceAnticipee,
+    ).filter((f) => f.memberId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _presenceAnticipeeRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -9709,6 +18190,31 @@ class $$MembersTableFilterComposer
     return f(composer);
   }
 
+  Expression<bool> pretDemandesRefs(
+    Expression<bool> Function($$PretDemandesTableFilterComposer f) f,
+  ) {
+    final $$PretDemandesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.memberId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableFilterComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<bool> pretsRefs(
     Expression<bool> Function($$PretsTableFilterComposer f) f,
   ) {
@@ -9785,6 +18291,135 @@ class $$MembersTableFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> echeancesRefs(
+    Expression<bool> Function($$EcheancesTableFilterComposer f) f,
+  ) {
+    final $$EcheancesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.memberId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableFilterComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> partageDeductionsRefs(
+    Expression<bool> Function($$PartageDeductionsTableFilterComposer f) f,
+  ) {
+    final $$PartageDeductionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.partageDeductions,
+      getReferencedColumn: (t) => t.memberId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartageDeductionsTableFilterComposer(
+            $db: $db,
+            $table: $db.partageDeductions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> partagePaiementConfirmationsRefs(
+    Expression<bool> Function(
+      $$PartagePaiementConfirmationsTableFilterComposer f,
+    )
+    f,
+  ) {
+    final $$PartagePaiementConfirmationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.partagePaiementConfirmations,
+          getReferencedColumn: (t) => t.memberId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PartagePaiementConfirmationsTableFilterComposer(
+                $db: $db,
+                $table: $db.partagePaiementConfirmations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> carnetsRefs(
+    Expression<bool> Function($$CarnetsTableFilterComposer f) f,
+  ) {
+    final $$CarnetsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.carnets,
+      getReferencedColumn: (t) => t.memberId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CarnetsTableFilterComposer(
+            $db: $db,
+            $table: $db.carnets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> presenceAnticipeeRefs(
+    Expression<bool> Function($$PresenceAnticipeeTableFilterComposer f) f,
+  ) {
+    final $$PresenceAnticipeeTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.presenceAnticipee,
+      getReferencedColumn: (t) => t.memberId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PresenceAnticipeeTableFilterComposer(
+            $db: $db,
+            $table: $db.presenceAnticipee,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -9971,6 +18606,31 @@ class $$MembersTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> pretDemandesRefs<T extends Object>(
+    Expression<T> Function($$PretDemandesTableAnnotationComposer a) f,
+  ) {
+    final $$PretDemandesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.memberId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> pretsRefs<T extends Object>(
     Expression<T> Function($$PretsTableAnnotationComposer a) f,
   ) {
@@ -10049,6 +18709,137 @@ class $$MembersTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> echeancesRefs<T extends Object>(
+    Expression<T> Function($$EcheancesTableAnnotationComposer a) f,
+  ) {
+    final $$EcheancesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.memberId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> partageDeductionsRefs<T extends Object>(
+    Expression<T> Function($$PartageDeductionsTableAnnotationComposer a) f,
+  ) {
+    final $$PartageDeductionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.partageDeductions,
+          getReferencedColumn: (t) => t.memberId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PartageDeductionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.partageDeductions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> partagePaiementConfirmationsRefs<T extends Object>(
+    Expression<T> Function(
+      $$PartagePaiementConfirmationsTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$PartagePaiementConfirmationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.partagePaiementConfirmations,
+          getReferencedColumn: (t) => t.memberId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PartagePaiementConfirmationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.partagePaiementConfirmations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> carnetsRefs<T extends Object>(
+    Expression<T> Function($$CarnetsTableAnnotationComposer a) f,
+  ) {
+    final $$CarnetsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.carnets,
+      getReferencedColumn: (t) => t.memberId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CarnetsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.carnets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> presenceAnticipeeRefs<T extends Object>(
+    Expression<T> Function($$PresenceAnticipeeTableAnnotationComposer a) f,
+  ) {
+    final $$PresenceAnticipeeTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.presenceAnticipee,
+          getReferencedColumn: (t) => t.memberId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PresenceAnticipeeTableAnnotationComposer(
+                $db: $db,
+                $table: $db.presenceAnticipee,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$MembersTableTableManager
@@ -10069,9 +18860,15 @@ class $$MembersTableTableManager
             bool agentAssignmentsRefs,
             bool cotisationsRefs,
             bool carnetsEngagesRefs,
+            bool pretDemandesRefs,
             bool pretsRefs,
             bool amendesRefs,
             bool fondsSolidariteContributionsRefs,
+            bool echeancesRefs,
+            bool partageDeductionsRefs,
+            bool partagePaiementConfirmationsRefs,
+            bool carnetsRefs,
+            bool presenceAnticipeeRefs,
           })
         > {
   $$MembersTableTableManager(_$AppDatabase db, $MembersTable table)
@@ -10135,9 +18932,15 @@ class $$MembersTableTableManager
                 agentAssignmentsRefs = false,
                 cotisationsRefs = false,
                 carnetsEngagesRefs = false,
+                pretDemandesRefs = false,
                 pretsRefs = false,
                 amendesRefs = false,
                 fondsSolidariteContributionsRefs = false,
+                echeancesRefs = false,
+                partageDeductionsRefs = false,
+                partagePaiementConfirmationsRefs = false,
+                carnetsRefs = false,
+                presenceAnticipeeRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -10145,10 +18948,17 @@ class $$MembersTableTableManager
                     if (agentAssignmentsRefs) db.agentAssignments,
                     if (cotisationsRefs) db.cotisations,
                     if (carnetsEngagesRefs) db.carnetsEngages,
+                    if (pretDemandesRefs) db.pretDemandes,
                     if (pretsRefs) db.prets,
                     if (amendesRefs) db.amendes,
                     if (fondsSolidariteContributionsRefs)
                       db.fondsSolidariteContributions,
+                    if (echeancesRefs) db.echeances,
+                    if (partageDeductionsRefs) db.partageDeductions,
+                    if (partagePaiementConfirmationsRefs)
+                      db.partagePaiementConfirmations,
+                    if (carnetsRefs) db.carnets,
+                    if (presenceAnticipeeRefs) db.presenceAnticipee,
                   ],
                   addJoins:
                       <
@@ -10247,6 +19057,27 @@ class $$MembersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (pretDemandesRefs)
+                        await $_getPrefetchedData<
+                          Member,
+                          $MembersTable,
+                          PretDemande
+                        >(
+                          currentTable: table,
+                          referencedTable: $$MembersTableReferences
+                              ._pretDemandesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$MembersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pretDemandesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.memberId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (pretsRefs)
                         await $_getPrefetchedData<Member, $MembersTable, Pret>(
                           currentTable: table,
@@ -10302,6 +19133,111 @@ class $$MembersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (echeancesRefs)
+                        await $_getPrefetchedData<
+                          Member,
+                          $MembersTable,
+                          Echeance
+                        >(
+                          currentTable: table,
+                          referencedTable: $$MembersTableReferences
+                              ._echeancesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$MembersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).echeancesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.memberId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (partageDeductionsRefs)
+                        await $_getPrefetchedData<
+                          Member,
+                          $MembersTable,
+                          PartageDeduction
+                        >(
+                          currentTable: table,
+                          referencedTable: $$MembersTableReferences
+                              ._partageDeductionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$MembersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).partageDeductionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.memberId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (partagePaiementConfirmationsRefs)
+                        await $_getPrefetchedData<
+                          Member,
+                          $MembersTable,
+                          PartagePaiementConfirmation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$MembersTableReferences
+                              ._partagePaiementConfirmationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$MembersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).partagePaiementConfirmationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.memberId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (carnetsRefs)
+                        await $_getPrefetchedData<
+                          Member,
+                          $MembersTable,
+                          Carnet
+                        >(
+                          currentTable: table,
+                          referencedTable: $$MembersTableReferences
+                              ._carnetsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$MembersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).carnetsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.memberId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (presenceAnticipeeRefs)
+                        await $_getPrefetchedData<
+                          Member,
+                          $MembersTable,
+                          PresenceAnticipeeData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$MembersTableReferences
+                              ._presenceAnticipeeRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$MembersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).presenceAnticipeeRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.memberId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -10327,9 +19263,15 @@ typedef $$MembersTableProcessedTableManager =
         bool agentAssignmentsRefs,
         bool cotisationsRefs,
         bool carnetsEngagesRefs,
+        bool pretDemandesRefs,
         bool pretsRefs,
         bool amendesRefs,
         bool fondsSolidariteContributionsRefs,
+        bool echeancesRefs,
+        bool partageDeductionsRefs,
+        bool partagePaiementConfirmationsRefs,
+        bool carnetsRefs,
+        bool presenceAnticipeeRefs,
       })
     >;
 typedef $$AgentAssignmentsTableCreateCompanionBuilder =
@@ -11288,6 +20230,7 @@ typedef $$CyclesTableCreateCompanionBuilder =
       Value<int> lateFeeFcfa,
       Value<int> loanDurationDays,
       Value<String> status,
+      Value<DateTime?> inscriptionsFermeesAt,
       Value<int> rowid,
     });
 typedef $$CyclesTableUpdateCompanionBuilder =
@@ -11302,6 +20245,7 @@ typedef $$CyclesTableUpdateCompanionBuilder =
       Value<int> lateFeeFcfa,
       Value<int> loanDurationDays,
       Value<String> status,
+      Value<DateTime?> inscriptionsFermeesAt,
       Value<int> rowid,
     });
 
@@ -11362,6 +20306,24 @@ final class $$CyclesTableReferences
     );
   }
 
+  static MultiTypedResultKey<$PretDemandesTable, List<PretDemande>>
+  _pretDemandesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.pretDemandes,
+    aliasName: 'cycles__id__pret_demandes__cycle_id',
+  );
+
+  $$PretDemandesTableProcessedTableManager get pretDemandesRefs {
+    final manager = $$PretDemandesTableTableManager(
+      $_db,
+      $_db.pretDemandes,
+    ).filter((f) => f.cycleId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pretDemandesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$PretsTable, List<Pret>> _pretsRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -11401,6 +20363,31 @@ final class $$CyclesTableReferences
   }
 
   static MultiTypedResultKey<
+    $CotisationsExceptionnellesTable,
+    List<CotisationsExceptionnelle>
+  >
+  _cotisationsExceptionnellesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.cotisationsExceptionnelles,
+        aliasName: 'cycles__id__cotisations_exceptionnelles__cycle_id',
+      );
+
+  $$CotisationsExceptionnellesTableProcessedTableManager
+  get cotisationsExceptionnellesRefs {
+    final manager = $$CotisationsExceptionnellesTableTableManager(
+      $_db,
+      $_db.cotisationsExceptionnelles,
+    ).filter((f) => f.cycleId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _cotisationsExceptionnellesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
     $FondsSolidariteContributionsTable,
     List<FondsSolidariteContribution>
   >
@@ -11419,6 +20406,118 @@ final class $$CyclesTableReferences
 
     final cache = $_typedResult.readTableOrNull(
       _fondsSolidariteContributionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$EcheancesTable, List<Echeance>>
+  _echeancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.echeances,
+    aliasName: 'cycles__id__echeances__cycle_id',
+  );
+
+  $$EcheancesTableProcessedTableManager get echeancesRefs {
+    final manager = $$EcheancesTableTableManager(
+      $_db,
+      $_db.echeances,
+    ).filter((f) => f.cycleId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_echeancesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$PartageDeductionsTable, List<PartageDeduction>>
+  _partageDeductionsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.partageDeductions,
+        aliasName: 'cycles__id__partage_deductions__cycle_id',
+      );
+
+  $$PartageDeductionsTableProcessedTableManager get partageDeductionsRefs {
+    final manager = $$PartageDeductionsTableTableManager(
+      $_db,
+      $_db.partageDeductions,
+    ).filter((f) => f.cycleId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _partageDeductionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $SeancesCotisationTable,
+    List<SeancesCotisationData>
+  >
+  _seancesCotisationRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.seancesCotisation,
+        aliasName: 'cycles__id__seances_cotisation__cycle_id',
+      );
+
+  $$SeancesCotisationTableProcessedTableManager get seancesCotisationRefs {
+    final manager = $$SeancesCotisationTableTableManager(
+      $_db,
+      $_db.seancesCotisation,
+    ).filter((f) => f.cycleId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _seancesCotisationRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $PartagePaiementConfirmationsTable,
+    List<PartagePaiementConfirmation>
+  >
+  _partagePaiementConfirmationsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.partagePaiementConfirmations,
+        aliasName: 'cycles__id__partage_paiement_confirmations__cycle_id',
+      );
+
+  $$PartagePaiementConfirmationsTableProcessedTableManager
+  get partagePaiementConfirmationsRefs {
+    final manager = $$PartagePaiementConfirmationsTableTableManager(
+      $_db,
+      $_db.partagePaiementConfirmations,
+    ).filter((f) => f.cycleId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _partagePaiementConfirmationsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $PresenceAnticipeeTable,
+    List<PresenceAnticipeeData>
+  >
+  _presenceAnticipeeRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.presenceAnticipee,
+        aliasName: 'cycles__id__presence_anticipee__cycle_id',
+      );
+
+  $$PresenceAnticipeeTableProcessedTableManager get presenceAnticipeeRefs {
+    final manager = $$PresenceAnticipeeTableTableManager(
+      $_db,
+      $_db.presenceAnticipee,
+    ).filter((f) => f.cycleId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _presenceAnticipeeRefsTable($_db),
     );
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
@@ -11477,6 +20576,11 @@ class $$CyclesTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get inscriptionsFermeesAt => $composableBuilder(
+    column: $table.inscriptionsFermeesAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11553,6 +20657,31 @@ class $$CyclesTableFilterComposer
     return f(composer);
   }
 
+  Expression<bool> pretDemandesRefs(
+    Expression<bool> Function($$PretDemandesTableFilterComposer f) f,
+  ) {
+    final $$PretDemandesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.cycleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableFilterComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<bool> pretsRefs(
     Expression<bool> Function($$PretsTableFilterComposer f) f,
   ) {
@@ -11603,6 +20732,33 @@ class $$CyclesTableFilterComposer
     return f(composer);
   }
 
+  Expression<bool> cotisationsExceptionnellesRefs(
+    Expression<bool> Function($$CotisationsExceptionnellesTableFilterComposer f)
+    f,
+  ) {
+    final $$CotisationsExceptionnellesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.cotisationsExceptionnelles,
+          getReferencedColumn: (t) => t.cycleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CotisationsExceptionnellesTableFilterComposer(
+                $db: $db,
+                $table: $db.cotisationsExceptionnelles,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<bool> fondsSolidariteContributionsRefs(
     Expression<bool> Function(
       $$FondsSolidariteContributionsTableFilterComposer f,
@@ -11629,6 +20785,135 @@ class $$CyclesTableFilterComposer
                     $removeJoinBuilderFromRootComposer,
               ),
         );
+    return f(composer);
+  }
+
+  Expression<bool> echeancesRefs(
+    Expression<bool> Function($$EcheancesTableFilterComposer f) f,
+  ) {
+    final $$EcheancesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.cycleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableFilterComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> partageDeductionsRefs(
+    Expression<bool> Function($$PartageDeductionsTableFilterComposer f) f,
+  ) {
+    final $$PartageDeductionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.partageDeductions,
+      getReferencedColumn: (t) => t.cycleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PartageDeductionsTableFilterComposer(
+            $db: $db,
+            $table: $db.partageDeductions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> seancesCotisationRefs(
+    Expression<bool> Function($$SeancesCotisationTableFilterComposer f) f,
+  ) {
+    final $$SeancesCotisationTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.seancesCotisation,
+      getReferencedColumn: (t) => t.cycleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SeancesCotisationTableFilterComposer(
+            $db: $db,
+            $table: $db.seancesCotisation,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> partagePaiementConfirmationsRefs(
+    Expression<bool> Function(
+      $$PartagePaiementConfirmationsTableFilterComposer f,
+    )
+    f,
+  ) {
+    final $$PartagePaiementConfirmationsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.partagePaiementConfirmations,
+          getReferencedColumn: (t) => t.cycleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PartagePaiementConfirmationsTableFilterComposer(
+                $db: $db,
+                $table: $db.partagePaiementConfirmations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<bool> presenceAnticipeeRefs(
+    Expression<bool> Function($$PresenceAnticipeeTableFilterComposer f) f,
+  ) {
+    final $$PresenceAnticipeeTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.presenceAnticipee,
+      getReferencedColumn: (t) => t.cycleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PresenceAnticipeeTableFilterComposer(
+            $db: $db,
+            $table: $db.presenceAnticipee,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
     return f(composer);
   }
 }
@@ -11684,6 +20969,11 @@ class $$CyclesTableOrderingComposer
 
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get inscriptionsFermeesAt => $composableBuilder(
+    column: $table.inscriptionsFermeesAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -11756,6 +21046,11 @@ class $$CyclesTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get inscriptionsFermeesAt => $composableBuilder(
+    column: $table.inscriptionsFermeesAt,
+    builder: (column) => column,
+  );
 
   $$GroupsTableAnnotationComposer get groupId {
     final $$GroupsTableAnnotationComposer composer = $composerBuilder(
@@ -11830,6 +21125,31 @@ class $$CyclesTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> pretDemandesRefs<T extends Object>(
+    Expression<T> Function($$PretDemandesTableAnnotationComposer a) f,
+  ) {
+    final $$PretDemandesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.cycleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> pretsRefs<T extends Object>(
     Expression<T> Function($$PretsTableAnnotationComposer a) f,
   ) {
@@ -11880,6 +21200,35 @@ class $$CyclesTableAnnotationComposer
     return f(composer);
   }
 
+  Expression<T> cotisationsExceptionnellesRefs<T extends Object>(
+    Expression<T> Function(
+      $$CotisationsExceptionnellesTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$CotisationsExceptionnellesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.cotisationsExceptionnelles,
+          getReferencedColumn: (t) => t.cycleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CotisationsExceptionnellesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.cotisationsExceptionnelles,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
   Expression<T> fondsSolidariteContributionsRefs<T extends Object>(
     Expression<T> Function(
       $$FondsSolidariteContributionsTableAnnotationComposer a,
@@ -11908,6 +21257,138 @@ class $$CyclesTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> echeancesRefs<T extends Object>(
+    Expression<T> Function($$EcheancesTableAnnotationComposer a) f,
+  ) {
+    final $$EcheancesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.cycleId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> partageDeductionsRefs<T extends Object>(
+    Expression<T> Function($$PartageDeductionsTableAnnotationComposer a) f,
+  ) {
+    final $$PartageDeductionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.partageDeductions,
+          getReferencedColumn: (t) => t.cycleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PartageDeductionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.partageDeductions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> seancesCotisationRefs<T extends Object>(
+    Expression<T> Function($$SeancesCotisationTableAnnotationComposer a) f,
+  ) {
+    final $$SeancesCotisationTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.seancesCotisation,
+          getReferencedColumn: (t) => t.cycleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$SeancesCotisationTableAnnotationComposer(
+                $db: $db,
+                $table: $db.seancesCotisation,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> partagePaiementConfirmationsRefs<T extends Object>(
+    Expression<T> Function(
+      $$PartagePaiementConfirmationsTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$PartagePaiementConfirmationsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.partagePaiementConfirmations,
+          getReferencedColumn: (t) => t.cycleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PartagePaiementConfirmationsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.partagePaiementConfirmations,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> presenceAnticipeeRefs<T extends Object>(
+    Expression<T> Function($$PresenceAnticipeeTableAnnotationComposer a) f,
+  ) {
+    final $$PresenceAnticipeeTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.presenceAnticipee,
+          getReferencedColumn: (t) => t.cycleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PresenceAnticipeeTableAnnotationComposer(
+                $db: $db,
+                $table: $db.presenceAnticipee,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$CyclesTableTableManager
@@ -11927,9 +21408,16 @@ class $$CyclesTableTableManager
             bool groupId,
             bool cotisationsRefs,
             bool carnetsEngagesRefs,
+            bool pretDemandesRefs,
             bool pretsRefs,
             bool amendesRefs,
+            bool cotisationsExceptionnellesRefs,
             bool fondsSolidariteContributionsRefs,
+            bool echeancesRefs,
+            bool partageDeductionsRefs,
+            bool seancesCotisationRefs,
+            bool partagePaiementConfirmationsRefs,
+            bool presenceAnticipeeRefs,
           })
         > {
   $$CyclesTableTableManager(_$AppDatabase db, $CyclesTable table)
@@ -11955,6 +21443,7 @@ class $$CyclesTableTableManager
                 Value<int> lateFeeFcfa = const Value.absent(),
                 Value<int> loanDurationDays = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<DateTime?> inscriptionsFermeesAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CyclesCompanion(
                 id: id,
@@ -11967,6 +21456,7 @@ class $$CyclesTableTableManager
                 lateFeeFcfa: lateFeeFcfa,
                 loanDurationDays: loanDurationDays,
                 status: status,
+                inscriptionsFermeesAt: inscriptionsFermeesAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11981,6 +21471,7 @@ class $$CyclesTableTableManager
                 Value<int> lateFeeFcfa = const Value.absent(),
                 Value<int> loanDurationDays = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<DateTime?> inscriptionsFermeesAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CyclesCompanion.insert(
                 id: id,
@@ -11993,6 +21484,7 @@ class $$CyclesTableTableManager
                 lateFeeFcfa: lateFeeFcfa,
                 loanDurationDays: loanDurationDays,
                 status: status,
+                inscriptionsFermeesAt: inscriptionsFermeesAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -12006,19 +21498,35 @@ class $$CyclesTableTableManager
                 groupId = false,
                 cotisationsRefs = false,
                 carnetsEngagesRefs = false,
+                pretDemandesRefs = false,
                 pretsRefs = false,
                 amendesRefs = false,
+                cotisationsExceptionnellesRefs = false,
                 fondsSolidariteContributionsRefs = false,
+                echeancesRefs = false,
+                partageDeductionsRefs = false,
+                seancesCotisationRefs = false,
+                partagePaiementConfirmationsRefs = false,
+                presenceAnticipeeRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (cotisationsRefs) db.cotisations,
                     if (carnetsEngagesRefs) db.carnetsEngages,
+                    if (pretDemandesRefs) db.pretDemandes,
                     if (pretsRefs) db.prets,
                     if (amendesRefs) db.amendes,
+                    if (cotisationsExceptionnellesRefs)
+                      db.cotisationsExceptionnelles,
                     if (fondsSolidariteContributionsRefs)
                       db.fondsSolidariteContributions,
+                    if (echeancesRefs) db.echeances,
+                    if (partageDeductionsRefs) db.partageDeductions,
+                    if (seancesCotisationRefs) db.seancesCotisation,
+                    if (partagePaiementConfirmationsRefs)
+                      db.partagePaiementConfirmations,
+                    if (presenceAnticipeeRefs) db.presenceAnticipee,
                   ],
                   addJoins:
                       <
@@ -12096,6 +21604,27 @@ class $$CyclesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (pretDemandesRefs)
+                        await $_getPrefetchedData<
+                          Cycle,
+                          $CyclesTable,
+                          PretDemande
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CyclesTableReferences
+                              ._pretDemandesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CyclesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pretDemandesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cycleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (pretsRefs)
                         await $_getPrefetchedData<Cycle, $CyclesTable, Pret>(
                           currentTable: table,
@@ -12126,6 +21655,27 @@ class $$CyclesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (cotisationsExceptionnellesRefs)
+                        await $_getPrefetchedData<
+                          Cycle,
+                          $CyclesTable,
+                          CotisationsExceptionnelle
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CyclesTableReferences
+                              ._cotisationsExceptionnellesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CyclesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cotisationsExceptionnellesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cycleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (fondsSolidariteContributionsRefs)
                         await $_getPrefetchedData<
                           Cycle,
@@ -12141,6 +21691,111 @@ class $$CyclesTableTableManager
                                 table,
                                 p0,
                               ).fondsSolidariteContributionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cycleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (echeancesRefs)
+                        await $_getPrefetchedData<
+                          Cycle,
+                          $CyclesTable,
+                          Echeance
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CyclesTableReferences
+                              ._echeancesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CyclesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).echeancesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cycleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (partageDeductionsRefs)
+                        await $_getPrefetchedData<
+                          Cycle,
+                          $CyclesTable,
+                          PartageDeduction
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CyclesTableReferences
+                              ._partageDeductionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CyclesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).partageDeductionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cycleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (seancesCotisationRefs)
+                        await $_getPrefetchedData<
+                          Cycle,
+                          $CyclesTable,
+                          SeancesCotisationData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CyclesTableReferences
+                              ._seancesCotisationRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CyclesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).seancesCotisationRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cycleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (partagePaiementConfirmationsRefs)
+                        await $_getPrefetchedData<
+                          Cycle,
+                          $CyclesTable,
+                          PartagePaiementConfirmation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CyclesTableReferences
+                              ._partagePaiementConfirmationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CyclesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).partagePaiementConfirmationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cycleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (presenceAnticipeeRefs)
+                        await $_getPrefetchedData<
+                          Cycle,
+                          $CyclesTable,
+                          PresenceAnticipeeData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CyclesTableReferences
+                              ._presenceAnticipeeRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CyclesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).presenceAnticipeeRefs,
                           referencedItemsForCurrentItem:
                               (item, referencedItems) => referencedItems.where(
                                 (e) => e.cycleId == item.id,
@@ -12171,9 +21826,16 @@ typedef $$CyclesTableProcessedTableManager =
         bool groupId,
         bool cotisationsRefs,
         bool carnetsEngagesRefs,
+        bool pretDemandesRefs,
         bool pretsRefs,
         bool amendesRefs,
+        bool cotisationsExceptionnellesRefs,
         bool fondsSolidariteContributionsRefs,
+        bool echeancesRefs,
+        bool partageDeductionsRefs,
+        bool seancesCotisationRefs,
+        bool partagePaiementConfirmationsRefs,
+        bool presenceAnticipeeRefs,
       })
     >;
 typedef $$CotisationsTableCreateCompanionBuilder =
@@ -12186,10 +21848,12 @@ typedef $$CotisationsTableCreateCompanionBuilder =
       required String groupId,
       required String cycleId,
       required String memberId,
+      Value<int> carnetNumero,
       required int partsCount,
       Value<String> source,
       required String recordedByPhone,
       Value<DateTime> recordedAt,
+      Value<DateTime?> echeanceDate,
       Value<int> rowid,
     });
 typedef $$CotisationsTableUpdateCompanionBuilder =
@@ -12202,10 +21866,12 @@ typedef $$CotisationsTableUpdateCompanionBuilder =
       Value<String> groupId,
       Value<String> cycleId,
       Value<String> memberId,
+      Value<int> carnetNumero,
       Value<int> partsCount,
       Value<String> source,
       Value<String> recordedByPhone,
       Value<DateTime> recordedAt,
+      Value<DateTime?> echeanceDate,
       Value<int> rowid,
     });
 
@@ -12263,6 +21929,24 @@ final class $$CotisationsTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$EcheancesTable, List<Echeance>>
+  _echeancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.echeances,
+    aliasName: 'cotisations__id__echeances__cotisation_id',
+  );
+
+  $$EcheancesTableProcessedTableManager get echeancesRefs {
+    final manager = $$EcheancesTableTableManager(
+      $_db,
+      $_db.echeances,
+    ).filter((f) => f.cotisationId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_echeancesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$CotisationsTableFilterComposer
@@ -12299,6 +21983,11 @@ class $$CotisationsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<int> get partsCount => $composableBuilder(
     column: $table.partsCount,
     builder: (column) => ColumnFilters(column),
@@ -12316,6 +22005,11 @@ class $$CotisationsTableFilterComposer
 
   ColumnFilters<DateTime> get recordedAt => $composableBuilder(
     column: $table.recordedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -12387,6 +22081,31 @@ class $$CotisationsTableFilterComposer
     );
     return composer;
   }
+
+  Expression<bool> echeancesRefs(
+    Expression<bool> Function($$EcheancesTableFilterComposer f) f,
+  ) {
+    final $$EcheancesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.cotisationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableFilterComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CotisationsTableOrderingComposer
@@ -12423,6 +22142,11 @@ class $$CotisationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get partsCount => $composableBuilder(
     column: $table.partsCount,
     builder: (column) => ColumnOrderings(column),
@@ -12440,6 +22164,11 @@ class $$CotisationsTableOrderingComposer
 
   ColumnOrderings<DateTime> get recordedAt => $composableBuilder(
     column: $table.recordedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -12543,6 +22272,11 @@ class $$CotisationsTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
+  GeneratedColumn<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get partsCount => $composableBuilder(
     column: $table.partsCount,
     builder: (column) => column,
@@ -12558,6 +22292,11 @@ class $$CotisationsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get recordedAt => $composableBuilder(
     column: $table.recordedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
     builder: (column) => column,
   );
 
@@ -12629,6 +22368,31 @@ class $$CotisationsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> echeancesRefs<T extends Object>(
+    Expression<T> Function($$EcheancesTableAnnotationComposer a) f,
+  ) {
+    final $$EcheancesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.cotisationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CotisationsTableTableManager
@@ -12644,7 +22408,12 @@ class $$CotisationsTableTableManager
           $$CotisationsTableUpdateCompanionBuilder,
           (Cotisation, $$CotisationsTableReferences),
           Cotisation,
-          PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
+          PrefetchHooks Function({
+            bool groupId,
+            bool cycleId,
+            bool memberId,
+            bool echeancesRefs,
+          })
         > {
   $$CotisationsTableTableManager(_$AppDatabase db, $CotisationsTable table)
     : super(
@@ -12667,10 +22436,12 @@ class $$CotisationsTableTableManager
                 Value<String> groupId = const Value.absent(),
                 Value<String> cycleId = const Value.absent(),
                 Value<String> memberId = const Value.absent(),
+                Value<int> carnetNumero = const Value.absent(),
                 Value<int> partsCount = const Value.absent(),
                 Value<String> source = const Value.absent(),
                 Value<String> recordedByPhone = const Value.absent(),
                 Value<DateTime> recordedAt = const Value.absent(),
+                Value<DateTime?> echeanceDate = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CotisationsCompanion(
                 previousHash: previousHash,
@@ -12681,10 +22452,12 @@ class $$CotisationsTableTableManager
                 groupId: groupId,
                 cycleId: cycleId,
                 memberId: memberId,
+                carnetNumero: carnetNumero,
                 partsCount: partsCount,
                 source: source,
                 recordedByPhone: recordedByPhone,
                 recordedAt: recordedAt,
+                echeanceDate: echeanceDate,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12697,10 +22470,12 @@ class $$CotisationsTableTableManager
                 required String groupId,
                 required String cycleId,
                 required String memberId,
+                Value<int> carnetNumero = const Value.absent(),
                 required int partsCount,
                 Value<String> source = const Value.absent(),
                 required String recordedByPhone,
                 Value<DateTime> recordedAt = const Value.absent(),
+                Value<DateTime?> echeanceDate = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CotisationsCompanion.insert(
                 previousHash: previousHash,
@@ -12711,10 +22486,12 @@ class $$CotisationsTableTableManager
                 groupId: groupId,
                 cycleId: cycleId,
                 memberId: memberId,
+                carnetNumero: carnetNumero,
                 partsCount: partsCount,
                 source: source,
                 recordedByPhone: recordedByPhone,
                 recordedAt: recordedAt,
+                echeanceDate: echeanceDate,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -12726,10 +22503,15 @@ class $$CotisationsTableTableManager
               )
               .toList(),
           prefetchHooksCallback:
-              ({groupId = false, cycleId = false, memberId = false}) {
+              ({
+                groupId = false,
+                cycleId = false,
+                memberId = false,
+                echeancesRefs = false,
+              }) {
                 return PrefetchHooks(
                   db: db,
-                  explicitlyWatchedTables: [],
+                  explicitlyWatchedTables: [if (echeancesRefs) db.echeances],
                   addJoins:
                       <
                         T extends TableManagerState<
@@ -12795,7 +22577,29 @@ class $$CotisationsTableTableManager
                         return state;
                       },
                   getPrefetchedDataCallback: (items) async {
-                    return [];
+                    return [
+                      if (echeancesRefs)
+                        await $_getPrefetchedData<
+                          Cotisation,
+                          $CotisationsTable,
+                          Echeance
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CotisationsTableReferences
+                              ._echeancesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CotisationsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).echeancesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cotisationId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
                 );
               },
@@ -12815,7 +22619,12 @@ typedef $$CotisationsTableProcessedTableManager =
       $$CotisationsTableUpdateCompanionBuilder,
       (Cotisation, $$CotisationsTableReferences),
       Cotisation,
-      PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
+      PrefetchHooks Function({
+        bool groupId,
+        bool cycleId,
+        bool memberId,
+        bool echeancesRefs,
+      })
     >;
 typedef $$CarnetsEngagesTableCreateCompanionBuilder =
     CarnetsEngagesCompanion Function({
@@ -12823,7 +22632,7 @@ typedef $$CarnetsEngagesTableCreateCompanionBuilder =
       required String groupId,
       required String cycleId,
       required String memberId,
-      required int partsCount,
+      required int nombreCarnets,
       Value<DateTime?> lockedAt,
       Value<int> rowid,
     });
@@ -12833,7 +22642,7 @@ typedef $$CarnetsEngagesTableUpdateCompanionBuilder =
       Value<String> groupId,
       Value<String> cycleId,
       Value<String> memberId,
-      Value<int> partsCount,
+      Value<int> nombreCarnets,
       Value<DateTime?> lockedAt,
       Value<int> rowid,
     });
@@ -12912,8 +22721,8 @@ class $$CarnetsEngagesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get partsCount => $composableBuilder(
-    column: $table.partsCount,
+  ColumnFilters<int> get nombreCarnets => $composableBuilder(
+    column: $table.nombreCarnets,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -13006,8 +22815,8 @@ class $$CarnetsEngagesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get partsCount => $composableBuilder(
-    column: $table.partsCount,
+  ColumnOrderings<int> get nombreCarnets => $composableBuilder(
+    column: $table.nombreCarnets,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -13098,8 +22907,8 @@ class $$CarnetsEngagesTableAnnotationComposer
   GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<int> get partsCount => $composableBuilder(
-    column: $table.partsCount,
+  GeneratedColumn<int> get nombreCarnets => $composableBuilder(
+    column: $table.nombreCarnets,
     builder: (column) => column,
   );
 
@@ -13210,7 +23019,7 @@ class $$CarnetsEngagesTableTableManager
                 Value<String> groupId = const Value.absent(),
                 Value<String> cycleId = const Value.absent(),
                 Value<String> memberId = const Value.absent(),
-                Value<int> partsCount = const Value.absent(),
+                Value<int> nombreCarnets = const Value.absent(),
                 Value<DateTime?> lockedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CarnetsEngagesCompanion(
@@ -13218,7 +23027,7 @@ class $$CarnetsEngagesTableTableManager
                 groupId: groupId,
                 cycleId: cycleId,
                 memberId: memberId,
-                partsCount: partsCount,
+                nombreCarnets: nombreCarnets,
                 lockedAt: lockedAt,
                 rowid: rowid,
               ),
@@ -13228,7 +23037,7 @@ class $$CarnetsEngagesTableTableManager
                 required String groupId,
                 required String cycleId,
                 required String memberId,
-                required int partsCount,
+                required int nombreCarnets,
                 Value<DateTime?> lockedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CarnetsEngagesCompanion.insert(
@@ -13236,7 +23045,7 @@ class $$CarnetsEngagesTableTableManager
                 groupId: groupId,
                 cycleId: cycleId,
                 memberId: memberId,
-                partsCount: partsCount,
+                nombreCarnets: nombreCarnets,
                 lockedAt: lockedAt,
                 rowid: rowid,
               ),
@@ -13340,6 +23149,787 @@ typedef $$CarnetsEngagesTableProcessedTableManager =
       CarnetsEngage,
       PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
     >;
+typedef $$PretDemandesTableCreateCompanionBuilder =
+    PretDemandesCompanion Function({
+      Value<String?> previousHash,
+      required String hash,
+      required String id,
+      required String groupId,
+      required String cycleId,
+      required String memberId,
+      required int montantDemandeFcfa,
+      required String recordedByPhone,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$PretDemandesTableUpdateCompanionBuilder =
+    PretDemandesCompanion Function({
+      Value<String?> previousHash,
+      Value<String> hash,
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> cycleId,
+      Value<String> memberId,
+      Value<int> montantDemandeFcfa,
+      Value<String> recordedByPhone,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$PretDemandesTableReferences
+    extends BaseReferences<_$AppDatabase, $PretDemandesTable, PretDemande> {
+  $$PretDemandesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) =>
+      db.groups.createAlias('pret_demandes__group_id__groups__id');
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<String>('group_id')!;
+
+    final manager = $$GroupsTableTableManager(
+      $_db,
+      $_db.groups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CyclesTable _cycleIdTable(_$AppDatabase db) =>
+      db.cycles.createAlias('pret_demandes__cycle_id__cycles__id');
+
+  $$CyclesTableProcessedTableManager get cycleId {
+    final $_column = $_itemColumn<String>('cycle_id')!;
+
+    final manager = $$CyclesTableTableManager(
+      $_db,
+      $_db.cycles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cycleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $MembersTable _memberIdTable(_$AppDatabase db) =>
+      db.members.createAlias('pret_demandes__member_id__members__id');
+
+  $$MembersTableProcessedTableManager get memberId {
+    final $_column = $_itemColumn<String>('member_id')!;
+
+    final manager = $$MembersTableTableManager(
+      $_db,
+      $_db.members,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_memberIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$PretsTable, List<Pret>> _pretsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.prets,
+    aliasName: 'pret_demandes__id__prets__demande_id',
+  );
+
+  $$PretsTableProcessedTableManager get pretsRefs {
+    final manager = $$PretsTableTableManager(
+      $_db,
+      $_db.prets,
+    ).filter((f) => f.demandeId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_pretsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$PretDemandeRefusTable, List<PretDemandeRefusData>>
+  _pretDemandeRefusRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.pretDemandeRefus,
+    aliasName: 'pret_demandes__id__pret_demande_refus__demande_id',
+  );
+
+  $$PretDemandeRefusTableProcessedTableManager get pretDemandeRefusRefs {
+    final manager = $$PretDemandeRefusTableTableManager(
+      $_db,
+      $_db.pretDemandeRefus,
+    ).filter((f) => f.demandeId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _pretDemandeRefusRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$PretDemandesTableFilterComposer
+    extends Composer<_$AppDatabase, $PretDemandesTable> {
+  $$PretDemandesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantDemandeFcfa => $composableBuilder(
+    column: $table.montantDemandeFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableFilterComposer get cycleId {
+    final $$CyclesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableFilterComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableFilterComposer get memberId {
+    final $$MembersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableFilterComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> pretsRefs(
+    Expression<bool> Function($$PretsTableFilterComposer f) f,
+  ) {
+    final $$PretsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.prets,
+      getReferencedColumn: (t) => t.demandeId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretsTableFilterComposer(
+            $db: $db,
+            $table: $db.prets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> pretDemandeRefusRefs(
+    Expression<bool> Function($$PretDemandeRefusTableFilterComposer f) f,
+  ) {
+    final $$PretDemandeRefusTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pretDemandeRefus,
+      getReferencedColumn: (t) => t.demandeId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandeRefusTableFilterComposer(
+            $db: $db,
+            $table: $db.pretDemandeRefus,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$PretDemandesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PretDemandesTable> {
+  $$PretDemandesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantDemandeFcfa => $composableBuilder(
+    column: $table.montantDemandeFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableOrderingComposer get cycleId {
+    final $$CyclesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableOrderingComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableOrderingComposer get memberId {
+    final $$MembersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableOrderingComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PretDemandesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PretDemandesTable> {
+  $$PretDemandesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hash =>
+      $composableBuilder(column: $table.hash, builder: (column) => column);
+
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get montantDemandeFcfa => $composableBuilder(
+    column: $table.montantDemandeFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableAnnotationComposer get cycleId {
+    final $$CyclesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableAnnotationComposer get memberId {
+    final $$MembersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> pretsRefs<T extends Object>(
+    Expression<T> Function($$PretsTableAnnotationComposer a) f,
+  ) {
+    final $$PretsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.prets,
+      getReferencedColumn: (t) => t.demandeId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.prets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> pretDemandeRefusRefs<T extends Object>(
+    Expression<T> Function($$PretDemandeRefusTableAnnotationComposer a) f,
+  ) {
+    final $$PretDemandeRefusTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pretDemandeRefus,
+      getReferencedColumn: (t) => t.demandeId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandeRefusTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pretDemandeRefus,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$PretDemandesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PretDemandesTable,
+          PretDemande,
+          $$PretDemandesTableFilterComposer,
+          $$PretDemandesTableOrderingComposer,
+          $$PretDemandesTableAnnotationComposer,
+          $$PretDemandesTableCreateCompanionBuilder,
+          $$PretDemandesTableUpdateCompanionBuilder,
+          (PretDemande, $$PretDemandesTableReferences),
+          PretDemande,
+          PrefetchHooks Function({
+            bool groupId,
+            bool cycleId,
+            bool memberId,
+            bool pretsRefs,
+            bool pretDemandeRefusRefs,
+          })
+        > {
+  $$PretDemandesTableTableManager(_$AppDatabase db, $PretDemandesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PretDemandesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PretDemandesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PretDemandesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                Value<String> hash = const Value.absent(),
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> cycleId = const Value.absent(),
+                Value<String> memberId = const Value.absent(),
+                Value<int> montantDemandeFcfa = const Value.absent(),
+                Value<String> recordedByPhone = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PretDemandesCompanion(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                montantDemandeFcfa: montantDemandeFcfa,
+                recordedByPhone: recordedByPhone,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                required String hash,
+                required String id,
+                required String groupId,
+                required String cycleId,
+                required String memberId,
+                required int montantDemandeFcfa,
+                required String recordedByPhone,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PretDemandesCompanion.insert(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                montantDemandeFcfa: montantDemandeFcfa,
+                recordedByPhone: recordedByPhone,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PretDemandesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                groupId = false,
+                cycleId = false,
+                memberId = false,
+                pretsRefs = false,
+                pretDemandeRefusRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (pretsRefs) db.prets,
+                    if (pretDemandeRefusRefs) db.pretDemandeRefus,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (groupId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.groupId,
+                                    referencedTable:
+                                        $$PretDemandesTableReferences
+                                            ._groupIdTable(db),
+                                    referencedColumn:
+                                        $$PretDemandesTableReferences
+                                            ._groupIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (cycleId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cycleId,
+                                    referencedTable:
+                                        $$PretDemandesTableReferences
+                                            ._cycleIdTable(db),
+                                    referencedColumn:
+                                        $$PretDemandesTableReferences
+                                            ._cycleIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (memberId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.memberId,
+                                    referencedTable:
+                                        $$PretDemandesTableReferences
+                                            ._memberIdTable(db),
+                                    referencedColumn:
+                                        $$PretDemandesTableReferences
+                                            ._memberIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (pretsRefs)
+                        await $_getPrefetchedData<
+                          PretDemande,
+                          $PretDemandesTable,
+                          Pret
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PretDemandesTableReferences
+                              ._pretsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PretDemandesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pretsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.demandeId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (pretDemandeRefusRefs)
+                        await $_getPrefetchedData<
+                          PretDemande,
+                          $PretDemandesTable,
+                          PretDemandeRefusData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PretDemandesTableReferences
+                              ._pretDemandeRefusRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PretDemandesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pretDemandeRefusRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.demandeId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$PretDemandesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PretDemandesTable,
+      PretDemande,
+      $$PretDemandesTableFilterComposer,
+      $$PretDemandesTableOrderingComposer,
+      $$PretDemandesTableAnnotationComposer,
+      $$PretDemandesTableCreateCompanionBuilder,
+      $$PretDemandesTableUpdateCompanionBuilder,
+      (PretDemande, $$PretDemandesTableReferences),
+      PretDemande,
+      PrefetchHooks Function({
+        bool groupId,
+        bool cycleId,
+        bool memberId,
+        bool pretsRefs,
+        bool pretDemandeRefusRefs,
+      })
+    >;
 typedef $$PretsTableCreateCompanionBuilder =
     PretsCompanion Function({
       Value<String?> previousHash,
@@ -13356,6 +23946,9 @@ typedef $$PretsTableCreateCompanionBuilder =
       required String initiatedByPhone,
       Value<String?> confirmationCode,
       Value<DateTime> createdAt,
+      Value<String?> renouvelePretId,
+      Value<bool> estAuRougeDesLeDepart,
+      Value<String?> demandeId,
       Value<int> rowid,
     });
 typedef $$PretsTableUpdateCompanionBuilder =
@@ -13374,6 +23967,9 @@ typedef $$PretsTableUpdateCompanionBuilder =
       Value<String> initiatedByPhone,
       Value<String?> confirmationCode,
       Value<DateTime> createdAt,
+      Value<String?> renouvelePretId,
+      Value<bool> estAuRougeDesLeDepart,
+      Value<String?> demandeId,
       Value<int> rowid,
     });
 
@@ -13426,6 +24022,40 @@ final class $$PretsTableReferences
       $_db.members,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_memberIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $PretsTable _renouvelePretIdTable(_$AppDatabase db) =>
+      db.prets.createAlias('prets__renouvele_pret_id__prets__id');
+
+  $$PretsTableProcessedTableManager? get renouvelePretId {
+    final $_column = $_itemColumn<String>('renouvele_pret_id');
+    if ($_column == null) return null;
+    final manager = $$PretsTableTableManager(
+      $_db,
+      $_db.prets,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_renouvelePretIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $PretDemandesTable _demandeIdTable(_$AppDatabase db) =>
+      db.pretDemandes.createAlias('prets__demande_id__pret_demandes__id');
+
+  $$PretDemandesTableProcessedTableManager? get demandeId {
+    final $_column = $_itemColumn<String>('demande_id');
+    if ($_column == null) return null;
+    final manager = $$PretDemandesTableTableManager(
+      $_db,
+      $_db.pretDemandes,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_demandeIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -13558,6 +24188,11 @@ class $$PretsTableFilterComposer extends Composer<_$AppDatabase, $PretsTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<bool> get estAuRougeDesLeDepart => $composableBuilder(
+    column: $table.estAuRougeDesLeDepart,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$GroupsTableFilterComposer get groupId {
     final $$GroupsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -13618,6 +24253,52 @@ class $$PretsTableFilterComposer extends Composer<_$AppDatabase, $PretsTable> {
           }) => $$MembersTableFilterComposer(
             $db: $db,
             $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PretsTableFilterComposer get renouvelePretId {
+    final $$PretsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.renouvelePretId,
+      referencedTable: $db.prets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretsTableFilterComposer(
+            $db: $db,
+            $table: $db.prets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PretDemandesTableFilterComposer get demandeId {
+    final $$PretDemandesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.demandeId,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableFilterComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -13767,6 +24448,11 @@ class $$PretsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get estAuRougeDesLeDepart => $composableBuilder(
+    column: $table.estAuRougeDesLeDepart,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$GroupsTableOrderingComposer get groupId {
     final $$GroupsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -13835,6 +24521,52 @@ class $$PretsTableOrderingComposer
     );
     return composer;
   }
+
+  $$PretsTableOrderingComposer get renouvelePretId {
+    final $$PretsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.renouvelePretId,
+      referencedTable: $db.prets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretsTableOrderingComposer(
+            $db: $db,
+            $table: $db.prets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PretDemandesTableOrderingComposer get demandeId {
+    final $$PretDemandesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.demandeId,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableOrderingComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$PretsTableAnnotationComposer
@@ -13894,6 +24626,11 @@ class $$PretsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get estAuRougeDesLeDepart => $composableBuilder(
+    column: $table.estAuRougeDesLeDepart,
+    builder: (column) => column,
+  );
 
   $$GroupsTableAnnotationComposer get groupId {
     final $$GroupsTableAnnotationComposer composer = $composerBuilder(
@@ -13955,6 +24692,52 @@ class $$PretsTableAnnotationComposer
           }) => $$MembersTableAnnotationComposer(
             $db: $db,
             $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PretsTableAnnotationComposer get renouvelePretId {
+    final $$PretsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.renouvelePretId,
+      referencedTable: $db.prets,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.prets,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$PretDemandesTableAnnotationComposer get demandeId {
+    final $$PretDemandesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.demandeId,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -14059,6 +24842,8 @@ class $$PretsTableTableManager
             bool groupId,
             bool cycleId,
             bool memberId,
+            bool renouvelePretId,
+            bool demandeId,
             bool pretConfirmationsRefs,
             bool pretRemboursementsRefs,
             bool pretAnnulationsRefs,
@@ -14091,6 +24876,9 @@ class $$PretsTableTableManager
                 Value<String> initiatedByPhone = const Value.absent(),
                 Value<String?> confirmationCode = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> renouvelePretId = const Value.absent(),
+                Value<bool> estAuRougeDesLeDepart = const Value.absent(),
+                Value<String?> demandeId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PretsCompanion(
                 previousHash: previousHash,
@@ -14107,6 +24895,9 @@ class $$PretsTableTableManager
                 initiatedByPhone: initiatedByPhone,
                 confirmationCode: confirmationCode,
                 createdAt: createdAt,
+                renouvelePretId: renouvelePretId,
+                estAuRougeDesLeDepart: estAuRougeDesLeDepart,
+                demandeId: demandeId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -14125,6 +24916,9 @@ class $$PretsTableTableManager
                 required String initiatedByPhone,
                 Value<String?> confirmationCode = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> renouvelePretId = const Value.absent(),
+                Value<bool> estAuRougeDesLeDepart = const Value.absent(),
+                Value<String?> demandeId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => PretsCompanion.insert(
                 previousHash: previousHash,
@@ -14141,6 +24935,9 @@ class $$PretsTableTableManager
                 initiatedByPhone: initiatedByPhone,
                 confirmationCode: confirmationCode,
                 createdAt: createdAt,
+                renouvelePretId: renouvelePretId,
+                estAuRougeDesLeDepart: estAuRougeDesLeDepart,
+                demandeId: demandeId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -14154,6 +24951,8 @@ class $$PretsTableTableManager
                 groupId = false,
                 cycleId = false,
                 memberId = false,
+                renouvelePretId = false,
+                demandeId = false,
                 pretConfirmationsRefs = false,
                 pretRemboursementsRefs = false,
                 pretAnnulationsRefs = false,
@@ -14216,6 +25015,32 @@ class $$PretsTableTableManager
                                         ._memberIdTable(db),
                                     referencedColumn: $$PretsTableReferences
                                         ._memberIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (renouvelePretId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.renouvelePretId,
+                                    referencedTable: $$PretsTableReferences
+                                        ._renouvelePretIdTable(db),
+                                    referencedColumn: $$PretsTableReferences
+                                        ._renouvelePretIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (demandeId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.demandeId,
+                                    referencedTable: $$PretsTableReferences
+                                        ._demandeIdTable(db),
+                                    referencedColumn: $$PretsTableReferences
+                                        ._demandeIdTable(db)
                                         .id,
                                   )
                                   as T;
@@ -14312,6 +25137,8 @@ typedef $$PretsTableProcessedTableManager =
         bool groupId,
         bool cycleId,
         bool memberId,
+        bool renouvelePretId,
+        bool demandeId,
         bool pretConfirmationsRefs,
         bool pretRemboursementsRefs,
         bool pretAnnulationsRefs,
@@ -15544,6 +26371,359 @@ typedef $$PretAnnulationsTableProcessedTableManager =
       PretAnnulation,
       PrefetchHooks Function({bool pretId})
     >;
+typedef $$PretDemandeRefusTableCreateCompanionBuilder =
+    PretDemandeRefusCompanion Function({
+      Value<String?> previousHash,
+      required String hash,
+      required String id,
+      required String demandeId,
+      required String recordedByPhone,
+      Value<DateTime> refusedAt,
+      Value<int> rowid,
+    });
+typedef $$PretDemandeRefusTableUpdateCompanionBuilder =
+    PretDemandeRefusCompanion Function({
+      Value<String?> previousHash,
+      Value<String> hash,
+      Value<String> id,
+      Value<String> demandeId,
+      Value<String> recordedByPhone,
+      Value<DateTime> refusedAt,
+      Value<int> rowid,
+    });
+
+final class $$PretDemandeRefusTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $PretDemandeRefusTable,
+          PretDemandeRefusData
+        > {
+  $$PretDemandeRefusTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $PretDemandesTable _demandeIdTable(_$AppDatabase db) => db.pretDemandes
+      .createAlias('pret_demande_refus__demande_id__pret_demandes__id');
+
+  $$PretDemandesTableProcessedTableManager get demandeId {
+    final $_column = $_itemColumn<String>('demande_id')!;
+
+    final manager = $$PretDemandesTableTableManager(
+      $_db,
+      $_db.pretDemandes,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_demandeIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PretDemandeRefusTableFilterComposer
+    extends Composer<_$AppDatabase, $PretDemandeRefusTable> {
+  $$PretDemandeRefusTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get refusedAt => $composableBuilder(
+    column: $table.refusedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PretDemandesTableFilterComposer get demandeId {
+    final $$PretDemandesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.demandeId,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableFilterComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PretDemandeRefusTableOrderingComposer
+    extends Composer<_$AppDatabase, $PretDemandeRefusTable> {
+  $$PretDemandeRefusTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get refusedAt => $composableBuilder(
+    column: $table.refusedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PretDemandesTableOrderingComposer get demandeId {
+    final $$PretDemandesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.demandeId,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableOrderingComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PretDemandeRefusTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PretDemandeRefusTable> {
+  $$PretDemandeRefusTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hash =>
+      $composableBuilder(column: $table.hash, builder: (column) => column);
+
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get refusedAt =>
+      $composableBuilder(column: $table.refusedAt, builder: (column) => column);
+
+  $$PretDemandesTableAnnotationComposer get demandeId {
+    final $$PretDemandesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.demandeId,
+      referencedTable: $db.pretDemandes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PretDemandesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pretDemandes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PretDemandeRefusTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PretDemandeRefusTable,
+          PretDemandeRefusData,
+          $$PretDemandeRefusTableFilterComposer,
+          $$PretDemandeRefusTableOrderingComposer,
+          $$PretDemandeRefusTableAnnotationComposer,
+          $$PretDemandeRefusTableCreateCompanionBuilder,
+          $$PretDemandeRefusTableUpdateCompanionBuilder,
+          (PretDemandeRefusData, $$PretDemandeRefusTableReferences),
+          PretDemandeRefusData,
+          PrefetchHooks Function({bool demandeId})
+        > {
+  $$PretDemandeRefusTableTableManager(
+    _$AppDatabase db,
+    $PretDemandeRefusTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PretDemandeRefusTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PretDemandeRefusTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PretDemandeRefusTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                Value<String> hash = const Value.absent(),
+                Value<String> id = const Value.absent(),
+                Value<String> demandeId = const Value.absent(),
+                Value<String> recordedByPhone = const Value.absent(),
+                Value<DateTime> refusedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PretDemandeRefusCompanion(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                demandeId: demandeId,
+                recordedByPhone: recordedByPhone,
+                refusedAt: refusedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                required String hash,
+                required String id,
+                required String demandeId,
+                required String recordedByPhone,
+                Value<DateTime> refusedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PretDemandeRefusCompanion.insert(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                demandeId: demandeId,
+                recordedByPhone: recordedByPhone,
+                refusedAt: refusedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PretDemandeRefusTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({demandeId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (demandeId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.demandeId,
+                                referencedTable:
+                                    $$PretDemandeRefusTableReferences
+                                        ._demandeIdTable(db),
+                                referencedColumn:
+                                    $$PretDemandeRefusTableReferences
+                                        ._demandeIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PretDemandeRefusTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PretDemandeRefusTable,
+      PretDemandeRefusData,
+      $$PretDemandeRefusTableFilterComposer,
+      $$PretDemandeRefusTableOrderingComposer,
+      $$PretDemandeRefusTableAnnotationComposer,
+      $$PretDemandeRefusTableCreateCompanionBuilder,
+      $$PretDemandeRefusTableUpdateCompanionBuilder,
+      (PretDemandeRefusData, $$PretDemandeRefusTableReferences),
+      PretDemandeRefusData,
+      PrefetchHooks Function({bool demandeId})
+    >;
 typedef $$AmendesTableCreateCompanionBuilder =
     AmendesCompanion Function({
       Value<String?> previousHash,
@@ -15558,8 +26738,12 @@ typedef $$AmendesTableCreateCompanionBuilder =
       required String motif,
       required String recordedByPhone,
       Value<DateTime> recordedAt,
+      Value<int> carnetNumero,
+      Value<DateTime?> echeanceDate,
+      Value<String?> motifCodeSysteme,
       Value<bool> estAutoGeneree,
       Value<DateTime?> confirmedAt,
+      Value<DateTime?> reviewedAt,
       Value<int> rowid,
     });
 typedef $$AmendesTableUpdateCompanionBuilder =
@@ -15576,8 +26760,12 @@ typedef $$AmendesTableUpdateCompanionBuilder =
       Value<String> motif,
       Value<String> recordedByPhone,
       Value<DateTime> recordedAt,
+      Value<int> carnetNumero,
+      Value<DateTime?> echeanceDate,
+      Value<String?> motifCodeSysteme,
       Value<bool> estAutoGeneree,
       Value<DateTime?> confirmedAt,
+      Value<DateTime?> reviewedAt,
       Value<int> rowid,
     });
 
@@ -15656,6 +26844,44 @@ final class $$AmendesTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$AmendePaiementsTable, List<AmendePaiement>>
+  _amendePaiementsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.amendePaiements,
+    aliasName: 'amendes__id__amende_paiements__amende_id',
+  );
+
+  $$AmendePaiementsTableProcessedTableManager get amendePaiementsRefs {
+    final manager = $$AmendePaiementsTableTableManager(
+      $_db,
+      $_db.amendePaiements,
+    ).filter((f) => f.amendeId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _amendePaiementsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$EcheancesTable, List<Echeance>>
+  _echeancesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.echeances,
+    aliasName: 'amendes__id__echeances__amende_id',
+  );
+
+  $$EcheancesTableProcessedTableManager get echeancesRefs {
+    final manager = $$EcheancesTableTableManager(
+      $_db,
+      $_db.echeances,
+    ).filter((f) => f.amendeId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_echeancesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$AmendesTableFilterComposer
@@ -15712,6 +26938,21 @@ class $$AmendesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get motifCodeSysteme => $composableBuilder(
+    column: $table.motifCodeSysteme,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<bool> get estAutoGeneree => $composableBuilder(
     column: $table.estAutoGeneree,
     builder: (column) => ColumnFilters(column),
@@ -15719,6 +26960,11 @@ class $$AmendesTableFilterComposer
 
   ColumnFilters<DateTime> get confirmedAt => $composableBuilder(
     column: $table.confirmedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get reviewedAt => $composableBuilder(
+    column: $table.reviewedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15815,6 +27061,56 @@ class $$AmendesTableFilterComposer
     );
     return f(composer);
   }
+
+  Expression<bool> amendePaiementsRefs(
+    Expression<bool> Function($$AmendePaiementsTableFilterComposer f) f,
+  ) {
+    final $$AmendePaiementsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.amendePaiements,
+      getReferencedColumn: (t) => t.amendeId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AmendePaiementsTableFilterComposer(
+            $db: $db,
+            $table: $db.amendePaiements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> echeancesRefs(
+    Expression<bool> Function($$EcheancesTableFilterComposer f) f,
+  ) {
+    final $$EcheancesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.amendeId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableFilterComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$AmendesTableOrderingComposer
@@ -15871,6 +27167,21 @@ class $$AmendesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get motifCodeSysteme => $composableBuilder(
+    column: $table.motifCodeSysteme,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get estAutoGeneree => $composableBuilder(
     column: $table.estAutoGeneree,
     builder: (column) => ColumnOrderings(column),
@@ -15878,6 +27189,11 @@ class $$AmendesTableOrderingComposer
 
   ColumnOrderings<DateTime> get confirmedAt => $composableBuilder(
     column: $table.confirmedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get reviewedAt => $composableBuilder(
+    column: $table.reviewedAt,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -15999,6 +27315,21 @@ class $$AmendesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get motifCodeSysteme => $composableBuilder(
+    column: $table.motifCodeSysteme,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get estAutoGeneree => $composableBuilder(
     column: $table.estAutoGeneree,
     builder: (column) => column,
@@ -16006,6 +27337,11 @@ class $$AmendesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get confirmedAt => $composableBuilder(
     column: $table.confirmedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get reviewedAt => $composableBuilder(
+    column: $table.reviewedAt,
     builder: (column) => column,
   );
 
@@ -16103,6 +27439,56 @@ class $$AmendesTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> amendePaiementsRefs<T extends Object>(
+    Expression<T> Function($$AmendePaiementsTableAnnotationComposer a) f,
+  ) {
+    final $$AmendePaiementsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.amendePaiements,
+      getReferencedColumn: (t) => t.amendeId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AmendePaiementsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.amendePaiements,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> echeancesRefs<T extends Object>(
+    Expression<T> Function($$EcheancesTableAnnotationComposer a) f,
+  ) {
+    final $$EcheancesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.echeances,
+      getReferencedColumn: (t) => t.amendeId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$EcheancesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.echeances,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$AmendesTableTableManager
@@ -16123,6 +27509,8 @@ class $$AmendesTableTableManager
             bool cycleId,
             bool memberId,
             bool amendeAnnulationsRefs,
+            bool amendePaiementsRefs,
+            bool echeancesRefs,
           })
         > {
   $$AmendesTableTableManager(_$AppDatabase db, $AmendesTable table)
@@ -16150,8 +27538,12 @@ class $$AmendesTableTableManager
                 Value<String> motif = const Value.absent(),
                 Value<String> recordedByPhone = const Value.absent(),
                 Value<DateTime> recordedAt = const Value.absent(),
+                Value<int> carnetNumero = const Value.absent(),
+                Value<DateTime?> echeanceDate = const Value.absent(),
+                Value<String?> motifCodeSysteme = const Value.absent(),
                 Value<bool> estAutoGeneree = const Value.absent(),
                 Value<DateTime?> confirmedAt = const Value.absent(),
+                Value<DateTime?> reviewedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AmendesCompanion(
                 previousHash: previousHash,
@@ -16166,8 +27558,12 @@ class $$AmendesTableTableManager
                 motif: motif,
                 recordedByPhone: recordedByPhone,
                 recordedAt: recordedAt,
+                carnetNumero: carnetNumero,
+                echeanceDate: echeanceDate,
+                motifCodeSysteme: motifCodeSysteme,
                 estAutoGeneree: estAutoGeneree,
                 confirmedAt: confirmedAt,
+                reviewedAt: reviewedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -16184,8 +27580,12 @@ class $$AmendesTableTableManager
                 required String motif,
                 required String recordedByPhone,
                 Value<DateTime> recordedAt = const Value.absent(),
+                Value<int> carnetNumero = const Value.absent(),
+                Value<DateTime?> echeanceDate = const Value.absent(),
+                Value<String?> motifCodeSysteme = const Value.absent(),
                 Value<bool> estAutoGeneree = const Value.absent(),
                 Value<DateTime?> confirmedAt = const Value.absent(),
+                Value<DateTime?> reviewedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => AmendesCompanion.insert(
                 previousHash: previousHash,
@@ -16200,8 +27600,12 @@ class $$AmendesTableTableManager
                 motif: motif,
                 recordedByPhone: recordedByPhone,
                 recordedAt: recordedAt,
+                carnetNumero: carnetNumero,
+                echeanceDate: echeanceDate,
+                motifCodeSysteme: motifCodeSysteme,
                 estAutoGeneree: estAutoGeneree,
                 confirmedAt: confirmedAt,
+                reviewedAt: reviewedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -16218,11 +27622,15 @@ class $$AmendesTableTableManager
                 cycleId = false,
                 memberId = false,
                 amendeAnnulationsRefs = false,
+                amendePaiementsRefs = false,
+                echeancesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (amendeAnnulationsRefs) db.amendeAnnulations,
+                    if (amendePaiementsRefs) db.amendePaiements,
+                    if (echeancesRefs) db.echeances,
                   ],
                   addJoins:
                       <
@@ -16305,6 +27713,48 @@ class $$AmendesTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (amendePaiementsRefs)
+                        await $_getPrefetchedData<
+                          Amende,
+                          $AmendesTable,
+                          AmendePaiement
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AmendesTableReferences
+                              ._amendePaiementsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AmendesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).amendePaiementsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.amendeId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (echeancesRefs)
+                        await $_getPrefetchedData<
+                          Amende,
+                          $AmendesTable,
+                          Echeance
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AmendesTableReferences
+                              ._echeancesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AmendesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).echeancesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.amendeId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -16330,6 +27780,8 @@ typedef $$AmendesTableProcessedTableManager =
         bool cycleId,
         bool memberId,
         bool amendeAnnulationsRefs,
+        bool amendePaiementsRefs,
+        bool echeancesRefs,
       })
     >;
 typedef $$AmendeAnnulationsTableCreateCompanionBuilder =
@@ -16707,6 +28159,1042 @@ typedef $$AmendeAnnulationsTableProcessedTableManager =
       AmendeAnnulation,
       PrefetchHooks Function({bool amendeId})
     >;
+typedef $$AmendePaiementsTableCreateCompanionBuilder =
+    AmendePaiementsCompanion Function({
+      Value<String?> previousHash,
+      required String hash,
+      required String id,
+      required String amendeId,
+      required int montantFcfa,
+      required String recordedByPhone,
+      Value<DateTime> recordedAt,
+      Value<int> rowid,
+    });
+typedef $$AmendePaiementsTableUpdateCompanionBuilder =
+    AmendePaiementsCompanion Function({
+      Value<String?> previousHash,
+      Value<String> hash,
+      Value<String> id,
+      Value<String> amendeId,
+      Value<int> montantFcfa,
+      Value<String> recordedByPhone,
+      Value<DateTime> recordedAt,
+      Value<int> rowid,
+    });
+
+final class $$AmendePaiementsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $AmendePaiementsTable, AmendePaiement> {
+  $$AmendePaiementsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AmendesTable _amendeIdTable(_$AppDatabase db) =>
+      db.amendes.createAlias('amende_paiements__amende_id__amendes__id');
+
+  $$AmendesTableProcessedTableManager get amendeId {
+    final $_column = $_itemColumn<String>('amende_id')!;
+
+    final manager = $$AmendesTableTableManager(
+      $_db,
+      $_db.amendes,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_amendeIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$AmendePaiementsTableFilterComposer
+    extends Composer<_$AppDatabase, $AmendePaiementsTable> {
+  $$AmendePaiementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantFcfa => $composableBuilder(
+    column: $table.montantFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AmendesTableFilterComposer get amendeId {
+    final $$AmendesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.amendeId,
+      referencedTable: $db.amendes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AmendesTableFilterComposer(
+            $db: $db,
+            $table: $db.amendes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AmendePaiementsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AmendePaiementsTable> {
+  $$AmendePaiementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantFcfa => $composableBuilder(
+    column: $table.montantFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AmendesTableOrderingComposer get amendeId {
+    final $$AmendesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.amendeId,
+      referencedTable: $db.amendes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AmendesTableOrderingComposer(
+            $db: $db,
+            $table: $db.amendes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AmendePaiementsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AmendePaiementsTable> {
+  $$AmendePaiementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hash =>
+      $composableBuilder(column: $table.hash, builder: (column) => column);
+
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get montantFcfa => $composableBuilder(
+    column: $table.montantFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => column,
+  );
+
+  $$AmendesTableAnnotationComposer get amendeId {
+    final $$AmendesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.amendeId,
+      referencedTable: $db.amendes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AmendesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.amendes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$AmendePaiementsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AmendePaiementsTable,
+          AmendePaiement,
+          $$AmendePaiementsTableFilterComposer,
+          $$AmendePaiementsTableOrderingComposer,
+          $$AmendePaiementsTableAnnotationComposer,
+          $$AmendePaiementsTableCreateCompanionBuilder,
+          $$AmendePaiementsTableUpdateCompanionBuilder,
+          (AmendePaiement, $$AmendePaiementsTableReferences),
+          AmendePaiement,
+          PrefetchHooks Function({bool amendeId})
+        > {
+  $$AmendePaiementsTableTableManager(
+    _$AppDatabase db,
+    $AmendePaiementsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AmendePaiementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AmendePaiementsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AmendePaiementsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                Value<String> hash = const Value.absent(),
+                Value<String> id = const Value.absent(),
+                Value<String> amendeId = const Value.absent(),
+                Value<int> montantFcfa = const Value.absent(),
+                Value<String> recordedByPhone = const Value.absent(),
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AmendePaiementsCompanion(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                amendeId: amendeId,
+                montantFcfa: montantFcfa,
+                recordedByPhone: recordedByPhone,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                required String hash,
+                required String id,
+                required String amendeId,
+                required int montantFcfa,
+                required String recordedByPhone,
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AmendePaiementsCompanion.insert(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                amendeId: amendeId,
+                montantFcfa: montantFcfa,
+                recordedByPhone: recordedByPhone,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$AmendePaiementsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({amendeId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (amendeId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.amendeId,
+                                referencedTable:
+                                    $$AmendePaiementsTableReferences
+                                        ._amendeIdTable(db),
+                                referencedColumn:
+                                    $$AmendePaiementsTableReferences
+                                        ._amendeIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$AmendePaiementsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AmendePaiementsTable,
+      AmendePaiement,
+      $$AmendePaiementsTableFilterComposer,
+      $$AmendePaiementsTableOrderingComposer,
+      $$AmendePaiementsTableAnnotationComposer,
+      $$AmendePaiementsTableCreateCompanionBuilder,
+      $$AmendePaiementsTableUpdateCompanionBuilder,
+      (AmendePaiement, $$AmendePaiementsTableReferences),
+      AmendePaiement,
+      PrefetchHooks Function({bool amendeId})
+    >;
+typedef $$CotisationsExceptionnellesTableCreateCompanionBuilder =
+    CotisationsExceptionnellesCompanion Function({
+      Value<String?> previousHash,
+      required String hash,
+      required String id,
+      required String groupId,
+      required String cycleId,
+      required String motif,
+      required int montantFcfa,
+      required DateTime dateLimite,
+      required String createdByPhone,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$CotisationsExceptionnellesTableUpdateCompanionBuilder =
+    CotisationsExceptionnellesCompanion Function({
+      Value<String?> previousHash,
+      Value<String> hash,
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> cycleId,
+      Value<String> motif,
+      Value<int> montantFcfa,
+      Value<DateTime> dateLimite,
+      Value<String> createdByPhone,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$CotisationsExceptionnellesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CotisationsExceptionnellesTable,
+          CotisationsExceptionnelle
+        > {
+  $$CotisationsExceptionnellesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) => db.groups.createAlias(
+    'cotisations_exceptionnelles__group_id__groups__id',
+  );
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<String>('group_id')!;
+
+    final manager = $$GroupsTableTableManager(
+      $_db,
+      $_db.groups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CyclesTable _cycleIdTable(_$AppDatabase db) => db.cycles.createAlias(
+    'cotisations_exceptionnelles__cycle_id__cycles__id',
+  );
+
+  $$CyclesTableProcessedTableManager get cycleId {
+    final $_column = $_itemColumn<String>('cycle_id')!;
+
+    final manager = $$CyclesTableTableManager(
+      $_db,
+      $_db.cycles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cycleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<
+    $FondsSolidariteContributionsTable,
+    List<FondsSolidariteContribution>
+  >
+  _fondsSolidariteContributionsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.fondsSolidariteContributions,
+    aliasName:
+        'cotisations_exceptionnelles__id__fonds_solidarite_contributions__cotisation_exceptionnelle_id',
+  );
+
+  $$FondsSolidariteContributionsTableProcessedTableManager
+  get fondsSolidariteContributionsRefs {
+    final manager =
+        $$FondsSolidariteContributionsTableTableManager(
+          $_db,
+          $_db.fondsSolidariteContributions,
+        ).filter(
+          (f) => f.cotisationExceptionnelleId.id.sqlEquals(
+            $_itemColumn<String>('id')!,
+          ),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _fondsSolidariteContributionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$CotisationsExceptionnellesTableFilterComposer
+    extends Composer<_$AppDatabase, $CotisationsExceptionnellesTable> {
+  $$CotisationsExceptionnellesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get motif => $composableBuilder(
+    column: $table.motif,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantFcfa => $composableBuilder(
+    column: $table.montantFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get dateLimite => $composableBuilder(
+    column: $table.dateLimite,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdByPhone => $composableBuilder(
+    column: $table.createdByPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableFilterComposer get cycleId {
+    final $$CyclesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableFilterComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<bool> fondsSolidariteContributionsRefs(
+    Expression<bool> Function(
+      $$FondsSolidariteContributionsTableFilterComposer f,
+    )
+    f,
+  ) {
+    final $$FondsSolidariteContributionsTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.fondsSolidariteContributions,
+          getReferencedColumn: (t) => t.cotisationExceptionnelleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$FondsSolidariteContributionsTableFilterComposer(
+                $db: $db,
+                $table: $db.fondsSolidariteContributions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$CotisationsExceptionnellesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CotisationsExceptionnellesTable> {
+  $$CotisationsExceptionnellesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get motif => $composableBuilder(
+    column: $table.motif,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantFcfa => $composableBuilder(
+    column: $table.montantFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get dateLimite => $composableBuilder(
+    column: $table.dateLimite,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdByPhone => $composableBuilder(
+    column: $table.createdByPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableOrderingComposer get cycleId {
+    final $$CyclesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableOrderingComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CotisationsExceptionnellesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CotisationsExceptionnellesTable> {
+  $$CotisationsExceptionnellesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hash =>
+      $composableBuilder(column: $table.hash, builder: (column) => column);
+
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get motif =>
+      $composableBuilder(column: $table.motif, builder: (column) => column);
+
+  GeneratedColumn<int> get montantFcfa => $composableBuilder(
+    column: $table.montantFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get dateLimite => $composableBuilder(
+    column: $table.dateLimite,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get createdByPhone => $composableBuilder(
+    column: $table.createdByPhone,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableAnnotationComposer get cycleId {
+    final $$CyclesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  Expression<T> fondsSolidariteContributionsRefs<T extends Object>(
+    Expression<T> Function(
+      $$FondsSolidariteContributionsTableAnnotationComposer a,
+    )
+    f,
+  ) {
+    final $$FondsSolidariteContributionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.fondsSolidariteContributions,
+          getReferencedColumn: (t) => t.cotisationExceptionnelleId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$FondsSolidariteContributionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.fondsSolidariteContributions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+}
+
+class $$CotisationsExceptionnellesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CotisationsExceptionnellesTable,
+          CotisationsExceptionnelle,
+          $$CotisationsExceptionnellesTableFilterComposer,
+          $$CotisationsExceptionnellesTableOrderingComposer,
+          $$CotisationsExceptionnellesTableAnnotationComposer,
+          $$CotisationsExceptionnellesTableCreateCompanionBuilder,
+          $$CotisationsExceptionnellesTableUpdateCompanionBuilder,
+          (
+            CotisationsExceptionnelle,
+            $$CotisationsExceptionnellesTableReferences,
+          ),
+          CotisationsExceptionnelle,
+          PrefetchHooks Function({
+            bool groupId,
+            bool cycleId,
+            bool fondsSolidariteContributionsRefs,
+          })
+        > {
+  $$CotisationsExceptionnellesTableTableManager(
+    _$AppDatabase db,
+    $CotisationsExceptionnellesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CotisationsExceptionnellesTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$CotisationsExceptionnellesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$CotisationsExceptionnellesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                Value<String> hash = const Value.absent(),
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> cycleId = const Value.absent(),
+                Value<String> motif = const Value.absent(),
+                Value<int> montantFcfa = const Value.absent(),
+                Value<DateTime> dateLimite = const Value.absent(),
+                Value<String> createdByPhone = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CotisationsExceptionnellesCompanion(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                motif: motif,
+                montantFcfa: montantFcfa,
+                dateLimite: dateLimite,
+                createdByPhone: createdByPhone,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                required String hash,
+                required String id,
+                required String groupId,
+                required String cycleId,
+                required String motif,
+                required int montantFcfa,
+                required DateTime dateLimite,
+                required String createdByPhone,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CotisationsExceptionnellesCompanion.insert(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                motif: motif,
+                montantFcfa: montantFcfa,
+                dateLimite: dateLimite,
+                createdByPhone: createdByPhone,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CotisationsExceptionnellesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                groupId = false,
+                cycleId = false,
+                fondsSolidariteContributionsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (fondsSolidariteContributionsRefs)
+                      db.fondsSolidariteContributions,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (groupId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.groupId,
+                                    referencedTable:
+                                        $$CotisationsExceptionnellesTableReferences
+                                            ._groupIdTable(db),
+                                    referencedColumn:
+                                        $$CotisationsExceptionnellesTableReferences
+                                            ._groupIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (cycleId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cycleId,
+                                    referencedTable:
+                                        $$CotisationsExceptionnellesTableReferences
+                                            ._cycleIdTable(db),
+                                    referencedColumn:
+                                        $$CotisationsExceptionnellesTableReferences
+                                            ._cycleIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (fondsSolidariteContributionsRefs)
+                        await $_getPrefetchedData<
+                          CotisationsExceptionnelle,
+                          $CotisationsExceptionnellesTable,
+                          FondsSolidariteContribution
+                        >(
+                          currentTable: table,
+                          referencedTable:
+                              $$CotisationsExceptionnellesTableReferences
+                                  ._fondsSolidariteContributionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CotisationsExceptionnellesTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).fondsSolidariteContributionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.cotisationExceptionnelleId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$CotisationsExceptionnellesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CotisationsExceptionnellesTable,
+      CotisationsExceptionnelle,
+      $$CotisationsExceptionnellesTableFilterComposer,
+      $$CotisationsExceptionnellesTableOrderingComposer,
+      $$CotisationsExceptionnellesTableAnnotationComposer,
+      $$CotisationsExceptionnellesTableCreateCompanionBuilder,
+      $$CotisationsExceptionnellesTableUpdateCompanionBuilder,
+      (CotisationsExceptionnelle, $$CotisationsExceptionnellesTableReferences),
+      CotisationsExceptionnelle,
+      PrefetchHooks Function({
+        bool groupId,
+        bool cycleId,
+        bool fondsSolidariteContributionsRefs,
+      })
+    >;
 typedef $$FondsSolidariteContributionsTableCreateCompanionBuilder =
     FondsSolidariteContributionsCompanion Function({
       Value<String?> previousHash,
@@ -16721,6 +29209,7 @@ typedef $$FondsSolidariteContributionsTableCreateCompanionBuilder =
       required String motif,
       required String recordedByPhone,
       Value<DateTime> recordedAt,
+      Value<String?> cotisationExceptionnelleId,
       Value<int> rowid,
     });
 typedef $$FondsSolidariteContributionsTableUpdateCompanionBuilder =
@@ -16737,6 +29226,7 @@ typedef $$FondsSolidariteContributionsTableUpdateCompanionBuilder =
       Value<String> motif,
       Value<String> recordedByPhone,
       Value<DateTime> recordedAt,
+      Value<String?> cotisationExceptionnelleId,
       Value<int> rowid,
     });
 
@@ -16800,6 +29290,29 @@ final class $$FondsSolidariteContributionsTableReferences
       $_db.members,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_memberIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CotisationsExceptionnellesTable _cotisationExceptionnelleIdTable(
+    _$AppDatabase db,
+  ) => db.cotisationsExceptionnelles.createAlias(
+    'fonds_solidarite_contributions__cotisation_exceptionnelle_id__cotisations_exceptionnelles__id',
+  );
+
+  $$CotisationsExceptionnellesTableProcessedTableManager?
+  get cotisationExceptionnelleId {
+    final $_column = $_itemColumn<String>('cotisation_exceptionnelle_id');
+    if ($_column == null) return null;
+    final manager = $$CotisationsExceptionnellesTableTableManager(
+      $_db,
+      $_db.cotisationsExceptionnelles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(
+      _cotisationExceptionnelleIdTable($_db),
+    );
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -16929,6 +29442,31 @@ class $$FondsSolidariteContributionsTableFilterComposer
     );
     return composer;
   }
+
+  $$CotisationsExceptionnellesTableFilterComposer
+  get cotisationExceptionnelleId {
+    final $$CotisationsExceptionnellesTableFilterComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.cotisationExceptionnelleId,
+          referencedTable: $db.cotisationsExceptionnelles,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CotisationsExceptionnellesTableFilterComposer(
+                $db: $db,
+                $table: $db.cotisationsExceptionnelles,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
 }
 
 class $$FondsSolidariteContributionsTableOrderingComposer
@@ -17053,6 +29591,31 @@ class $$FondsSolidariteContributionsTableOrderingComposer
     );
     return composer;
   }
+
+  $$CotisationsExceptionnellesTableOrderingComposer
+  get cotisationExceptionnelleId {
+    final $$CotisationsExceptionnellesTableOrderingComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.cotisationExceptionnelleId,
+          referencedTable: $db.cotisationsExceptionnelles,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CotisationsExceptionnellesTableOrderingComposer(
+                $db: $db,
+                $table: $db.cotisationsExceptionnelles,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
 }
 
 class $$FondsSolidariteContributionsTableAnnotationComposer
@@ -17171,6 +29734,31 @@ class $$FondsSolidariteContributionsTableAnnotationComposer
     );
     return composer;
   }
+
+  $$CotisationsExceptionnellesTableAnnotationComposer
+  get cotisationExceptionnelleId {
+    final $$CotisationsExceptionnellesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.cotisationExceptionnelleId,
+          referencedTable: $db.cotisationsExceptionnelles,
+          getReferencedColumn: (t) => t.id,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CotisationsExceptionnellesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.cotisationsExceptionnelles,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return composer;
+  }
 }
 
 class $$FondsSolidariteContributionsTableTableManager
@@ -17189,7 +29777,12 @@ class $$FondsSolidariteContributionsTableTableManager
             $$FondsSolidariteContributionsTableReferences,
           ),
           FondsSolidariteContribution,
-          PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
+          PrefetchHooks Function({
+            bool groupId,
+            bool cycleId,
+            bool memberId,
+            bool cotisationExceptionnelleId,
+          })
         > {
   $$FondsSolidariteContributionsTableTableManager(
     _$AppDatabase db,
@@ -17227,6 +29820,8 @@ class $$FondsSolidariteContributionsTableTableManager
                 Value<String> motif = const Value.absent(),
                 Value<String> recordedByPhone = const Value.absent(),
                 Value<DateTime> recordedAt = const Value.absent(),
+                Value<String?> cotisationExceptionnelleId =
+                    const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FondsSolidariteContributionsCompanion(
                 previousHash: previousHash,
@@ -17241,6 +29836,7 @@ class $$FondsSolidariteContributionsTableTableManager
                 motif: motif,
                 recordedByPhone: recordedByPhone,
                 recordedAt: recordedAt,
+                cotisationExceptionnelleId: cotisationExceptionnelleId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -17257,6 +29853,8 @@ class $$FondsSolidariteContributionsTableTableManager
                 required String motif,
                 required String recordedByPhone,
                 Value<DateTime> recordedAt = const Value.absent(),
+                Value<String?> cotisationExceptionnelleId =
+                    const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FondsSolidariteContributionsCompanion.insert(
                 previousHash: previousHash,
@@ -17271,6 +29869,7 @@ class $$FondsSolidariteContributionsTableTableManager
                 motif: motif,
                 recordedByPhone: recordedByPhone,
                 recordedAt: recordedAt,
+                cotisationExceptionnelleId: cotisationExceptionnelleId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -17278,6 +29877,3071 @@ class $$FondsSolidariteContributionsTableTableManager
                 (e) => (
                   e.readTable(table),
                   $$FondsSolidariteContributionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                groupId = false,
+                cycleId = false,
+                memberId = false,
+                cotisationExceptionnelleId = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (groupId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.groupId,
+                                    referencedTable:
+                                        $$FondsSolidariteContributionsTableReferences
+                                            ._groupIdTable(db),
+                                    referencedColumn:
+                                        $$FondsSolidariteContributionsTableReferences
+                                            ._groupIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (cycleId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cycleId,
+                                    referencedTable:
+                                        $$FondsSolidariteContributionsTableReferences
+                                            ._cycleIdTable(db),
+                                    referencedColumn:
+                                        $$FondsSolidariteContributionsTableReferences
+                                            ._cycleIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (memberId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.memberId,
+                                    referencedTable:
+                                        $$FondsSolidariteContributionsTableReferences
+                                            ._memberIdTable(db),
+                                    referencedColumn:
+                                        $$FondsSolidariteContributionsTableReferences
+                                            ._memberIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (cotisationExceptionnelleId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn:
+                                        table.cotisationExceptionnelleId,
+                                    referencedTable:
+                                        $$FondsSolidariteContributionsTableReferences
+                                            ._cotisationExceptionnelleIdTable(
+                                              db,
+                                            ),
+                                    referencedColumn:
+                                        $$FondsSolidariteContributionsTableReferences
+                                            ._cotisationExceptionnelleIdTable(
+                                              db,
+                                            )
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$FondsSolidariteContributionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FondsSolidariteContributionsTable,
+      FondsSolidariteContribution,
+      $$FondsSolidariteContributionsTableFilterComposer,
+      $$FondsSolidariteContributionsTableOrderingComposer,
+      $$FondsSolidariteContributionsTableAnnotationComposer,
+      $$FondsSolidariteContributionsTableCreateCompanionBuilder,
+      $$FondsSolidariteContributionsTableUpdateCompanionBuilder,
+      (
+        FondsSolidariteContribution,
+        $$FondsSolidariteContributionsTableReferences,
+      ),
+      FondsSolidariteContribution,
+      PrefetchHooks Function({
+        bool groupId,
+        bool cycleId,
+        bool memberId,
+        bool cotisationExceptionnelleId,
+      })
+    >;
+typedef $$EcheancesTableCreateCompanionBuilder =
+    EcheancesCompanion Function({
+      Value<String?> previousHash,
+      required String hash,
+      required String id,
+      required String groupId,
+      required String cycleId,
+      required String memberId,
+      Value<int> carnetNumero,
+      required DateTime echeanceDate,
+      required int montantDuFcfa,
+      Value<int> montantPayeFcfa,
+      Value<int> partsPayees,
+      Value<int> arrieresFcfa,
+      Value<int> amendeFcfa,
+      required String statut,
+      Value<String?> cotisationId,
+      Value<String?> amendeId,
+      required String recordedByPhone,
+      Value<DateTime> recordedAt,
+      Value<int> rowid,
+    });
+typedef $$EcheancesTableUpdateCompanionBuilder =
+    EcheancesCompanion Function({
+      Value<String?> previousHash,
+      Value<String> hash,
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> cycleId,
+      Value<String> memberId,
+      Value<int> carnetNumero,
+      Value<DateTime> echeanceDate,
+      Value<int> montantDuFcfa,
+      Value<int> montantPayeFcfa,
+      Value<int> partsPayees,
+      Value<int> arrieresFcfa,
+      Value<int> amendeFcfa,
+      Value<String> statut,
+      Value<String?> cotisationId,
+      Value<String?> amendeId,
+      Value<String> recordedByPhone,
+      Value<DateTime> recordedAt,
+      Value<int> rowid,
+    });
+
+final class $$EcheancesTableReferences
+    extends BaseReferences<_$AppDatabase, $EcheancesTable, Echeance> {
+  $$EcheancesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) =>
+      db.groups.createAlias('echeances__group_id__groups__id');
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<String>('group_id')!;
+
+    final manager = $$GroupsTableTableManager(
+      $_db,
+      $_db.groups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CyclesTable _cycleIdTable(_$AppDatabase db) =>
+      db.cycles.createAlias('echeances__cycle_id__cycles__id');
+
+  $$CyclesTableProcessedTableManager get cycleId {
+    final $_column = $_itemColumn<String>('cycle_id')!;
+
+    final manager = $$CyclesTableTableManager(
+      $_db,
+      $_db.cycles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cycleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $MembersTable _memberIdTable(_$AppDatabase db) =>
+      db.members.createAlias('echeances__member_id__members__id');
+
+  $$MembersTableProcessedTableManager get memberId {
+    final $_column = $_itemColumn<String>('member_id')!;
+
+    final manager = $$MembersTableTableManager(
+      $_db,
+      $_db.members,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_memberIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CotisationsTable _cotisationIdTable(_$AppDatabase db) =>
+      db.cotisations.createAlias('echeances__cotisation_id__cotisations__id');
+
+  $$CotisationsTableProcessedTableManager? get cotisationId {
+    final $_column = $_itemColumn<String>('cotisation_id');
+    if ($_column == null) return null;
+    final manager = $$CotisationsTableTableManager(
+      $_db,
+      $_db.cotisations,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cotisationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $AmendesTable _amendeIdTable(_$AppDatabase db) =>
+      db.amendes.createAlias('echeances__amende_id__amendes__id');
+
+  $$AmendesTableProcessedTableManager? get amendeId {
+    final $_column = $_itemColumn<String>('amende_id');
+    if ($_column == null) return null;
+    final manager = $$AmendesTableTableManager(
+      $_db,
+      $_db.amendes,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_amendeIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$EcheancesTableFilterComposer
+    extends Composer<_$AppDatabase, $EcheancesTable> {
+  $$EcheancesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantDuFcfa => $composableBuilder(
+    column: $table.montantDuFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantPayeFcfa => $composableBuilder(
+    column: $table.montantPayeFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get partsPayees => $composableBuilder(
+    column: $table.partsPayees,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get arrieresFcfa => $composableBuilder(
+    column: $table.arrieresFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get amendeFcfa => $composableBuilder(
+    column: $table.amendeFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableFilterComposer get cycleId {
+    final $$CyclesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableFilterComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableFilterComposer get memberId {
+    final $$MembersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableFilterComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CotisationsTableFilterComposer get cotisationId {
+    final $$CotisationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cotisationId,
+      referencedTable: $db.cotisations,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CotisationsTableFilterComposer(
+            $db: $db,
+            $table: $db.cotisations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AmendesTableFilterComposer get amendeId {
+    final $$AmendesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.amendeId,
+      referencedTable: $db.amendes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AmendesTableFilterComposer(
+            $db: $db,
+            $table: $db.amendes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EcheancesTableOrderingComposer
+    extends Composer<_$AppDatabase, $EcheancesTable> {
+  $$EcheancesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantDuFcfa => $composableBuilder(
+    column: $table.montantDuFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantPayeFcfa => $composableBuilder(
+    column: $table.montantPayeFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get partsPayees => $composableBuilder(
+    column: $table.partsPayees,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get arrieresFcfa => $composableBuilder(
+    column: $table.arrieresFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get amendeFcfa => $composableBuilder(
+    column: $table.amendeFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableOrderingComposer get cycleId {
+    final $$CyclesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableOrderingComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableOrderingComposer get memberId {
+    final $$MembersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableOrderingComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CotisationsTableOrderingComposer get cotisationId {
+    final $$CotisationsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cotisationId,
+      referencedTable: $db.cotisations,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CotisationsTableOrderingComposer(
+            $db: $db,
+            $table: $db.cotisations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AmendesTableOrderingComposer get amendeId {
+    final $$AmendesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.amendeId,
+      referencedTable: $db.amendes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AmendesTableOrderingComposer(
+            $db: $db,
+            $table: $db.amendes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EcheancesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EcheancesTable> {
+  $$EcheancesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hash =>
+      $composableBuilder(column: $table.hash, builder: (column) => column);
+
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get montantDuFcfa => $composableBuilder(
+    column: $table.montantDuFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get montantPayeFcfa => $composableBuilder(
+    column: $table.montantPayeFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get partsPayees => $composableBuilder(
+    column: $table.partsPayees,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get arrieresFcfa => $composableBuilder(
+    column: $table.arrieresFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get amendeFcfa => $composableBuilder(
+    column: $table.amendeFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get statut =>
+      $composableBuilder(column: $table.statut, builder: (column) => column);
+
+  GeneratedColumn<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => column,
+  );
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableAnnotationComposer get cycleId {
+    final $$CyclesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableAnnotationComposer get memberId {
+    final $$MembersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CotisationsTableAnnotationComposer get cotisationId {
+    final $$CotisationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cotisationId,
+      referencedTable: $db.cotisations,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CotisationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cotisations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$AmendesTableAnnotationComposer get amendeId {
+    final $$AmendesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.amendeId,
+      referencedTable: $db.amendes,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AmendesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.amendes,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$EcheancesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EcheancesTable,
+          Echeance,
+          $$EcheancesTableFilterComposer,
+          $$EcheancesTableOrderingComposer,
+          $$EcheancesTableAnnotationComposer,
+          $$EcheancesTableCreateCompanionBuilder,
+          $$EcheancesTableUpdateCompanionBuilder,
+          (Echeance, $$EcheancesTableReferences),
+          Echeance,
+          PrefetchHooks Function({
+            bool groupId,
+            bool cycleId,
+            bool memberId,
+            bool cotisationId,
+            bool amendeId,
+          })
+        > {
+  $$EcheancesTableTableManager(_$AppDatabase db, $EcheancesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EcheancesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EcheancesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EcheancesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                Value<String> hash = const Value.absent(),
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> cycleId = const Value.absent(),
+                Value<String> memberId = const Value.absent(),
+                Value<int> carnetNumero = const Value.absent(),
+                Value<DateTime> echeanceDate = const Value.absent(),
+                Value<int> montantDuFcfa = const Value.absent(),
+                Value<int> montantPayeFcfa = const Value.absent(),
+                Value<int> partsPayees = const Value.absent(),
+                Value<int> arrieresFcfa = const Value.absent(),
+                Value<int> amendeFcfa = const Value.absent(),
+                Value<String> statut = const Value.absent(),
+                Value<String?> cotisationId = const Value.absent(),
+                Value<String?> amendeId = const Value.absent(),
+                Value<String> recordedByPhone = const Value.absent(),
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EcheancesCompanion(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                carnetNumero: carnetNumero,
+                echeanceDate: echeanceDate,
+                montantDuFcfa: montantDuFcfa,
+                montantPayeFcfa: montantPayeFcfa,
+                partsPayees: partsPayees,
+                arrieresFcfa: arrieresFcfa,
+                amendeFcfa: amendeFcfa,
+                statut: statut,
+                cotisationId: cotisationId,
+                amendeId: amendeId,
+                recordedByPhone: recordedByPhone,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                required String hash,
+                required String id,
+                required String groupId,
+                required String cycleId,
+                required String memberId,
+                Value<int> carnetNumero = const Value.absent(),
+                required DateTime echeanceDate,
+                required int montantDuFcfa,
+                Value<int> montantPayeFcfa = const Value.absent(),
+                Value<int> partsPayees = const Value.absent(),
+                Value<int> arrieresFcfa = const Value.absent(),
+                Value<int> amendeFcfa = const Value.absent(),
+                required String statut,
+                Value<String?> cotisationId = const Value.absent(),
+                Value<String?> amendeId = const Value.absent(),
+                required String recordedByPhone,
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EcheancesCompanion.insert(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                carnetNumero: carnetNumero,
+                echeanceDate: echeanceDate,
+                montantDuFcfa: montantDuFcfa,
+                montantPayeFcfa: montantPayeFcfa,
+                partsPayees: partsPayees,
+                arrieresFcfa: arrieresFcfa,
+                amendeFcfa: amendeFcfa,
+                statut: statut,
+                cotisationId: cotisationId,
+                amendeId: amendeId,
+                recordedByPhone: recordedByPhone,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$EcheancesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                groupId = false,
+                cycleId = false,
+                memberId = false,
+                cotisationId = false,
+                amendeId = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (groupId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.groupId,
+                                    referencedTable: $$EcheancesTableReferences
+                                        ._groupIdTable(db),
+                                    referencedColumn: $$EcheancesTableReferences
+                                        ._groupIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (cycleId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cycleId,
+                                    referencedTable: $$EcheancesTableReferences
+                                        ._cycleIdTable(db),
+                                    referencedColumn: $$EcheancesTableReferences
+                                        ._cycleIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (memberId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.memberId,
+                                    referencedTable: $$EcheancesTableReferences
+                                        ._memberIdTable(db),
+                                    referencedColumn: $$EcheancesTableReferences
+                                        ._memberIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (cotisationId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cotisationId,
+                                    referencedTable: $$EcheancesTableReferences
+                                        ._cotisationIdTable(db),
+                                    referencedColumn: $$EcheancesTableReferences
+                                        ._cotisationIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (amendeId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.amendeId,
+                                    referencedTable: $$EcheancesTableReferences
+                                        ._amendeIdTable(db),
+                                    referencedColumn: $$EcheancesTableReferences
+                                        ._amendeIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$EcheancesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EcheancesTable,
+      Echeance,
+      $$EcheancesTableFilterComposer,
+      $$EcheancesTableOrderingComposer,
+      $$EcheancesTableAnnotationComposer,
+      $$EcheancesTableCreateCompanionBuilder,
+      $$EcheancesTableUpdateCompanionBuilder,
+      (Echeance, $$EcheancesTableReferences),
+      Echeance,
+      PrefetchHooks Function({
+        bool groupId,
+        bool cycleId,
+        bool memberId,
+        bool cotisationId,
+        bool amendeId,
+      })
+    >;
+typedef $$PartageDeductionsTableCreateCompanionBuilder =
+    PartageDeductionsCompanion Function({
+      Value<String?> previousHash,
+      required String hash,
+      required String id,
+      required String groupId,
+      required String cycleId,
+      required String memberId,
+      required int montantBrutFcfa,
+      required int detteFcfa,
+      required int montantDeduitFcfa,
+      required int montantNetFcfa,
+      Value<int> pertAvecFcfa,
+      required String recordedByPhone,
+      Value<DateTime> recordedAt,
+      Value<int> rowid,
+    });
+typedef $$PartageDeductionsTableUpdateCompanionBuilder =
+    PartageDeductionsCompanion Function({
+      Value<String?> previousHash,
+      Value<String> hash,
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> cycleId,
+      Value<String> memberId,
+      Value<int> montantBrutFcfa,
+      Value<int> detteFcfa,
+      Value<int> montantDeduitFcfa,
+      Value<int> montantNetFcfa,
+      Value<int> pertAvecFcfa,
+      Value<String> recordedByPhone,
+      Value<DateTime> recordedAt,
+      Value<int> rowid,
+    });
+
+final class $$PartageDeductionsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $PartageDeductionsTable,
+          PartageDeduction
+        > {
+  $$PartageDeductionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) =>
+      db.groups.createAlias('partage_deductions__group_id__groups__id');
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<String>('group_id')!;
+
+    final manager = $$GroupsTableTableManager(
+      $_db,
+      $_db.groups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CyclesTable _cycleIdTable(_$AppDatabase db) =>
+      db.cycles.createAlias('partage_deductions__cycle_id__cycles__id');
+
+  $$CyclesTableProcessedTableManager get cycleId {
+    final $_column = $_itemColumn<String>('cycle_id')!;
+
+    final manager = $$CyclesTableTableManager(
+      $_db,
+      $_db.cycles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cycleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $MembersTable _memberIdTable(_$AppDatabase db) =>
+      db.members.createAlias('partage_deductions__member_id__members__id');
+
+  $$MembersTableProcessedTableManager get memberId {
+    final $_column = $_itemColumn<String>('member_id')!;
+
+    final manager = $$MembersTableTableManager(
+      $_db,
+      $_db.members,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_memberIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PartageDeductionsTableFilterComposer
+    extends Composer<_$AppDatabase, $PartageDeductionsTable> {
+  $$PartageDeductionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantBrutFcfa => $composableBuilder(
+    column: $table.montantBrutFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get detteFcfa => $composableBuilder(
+    column: $table.detteFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantDeduitFcfa => $composableBuilder(
+    column: $table.montantDeduitFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantNetFcfa => $composableBuilder(
+    column: $table.montantNetFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pertAvecFcfa => $composableBuilder(
+    column: $table.pertAvecFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableFilterComposer get cycleId {
+    final $$CyclesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableFilterComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableFilterComposer get memberId {
+    final $$MembersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableFilterComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PartageDeductionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PartageDeductionsTable> {
+  $$PartageDeductionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantBrutFcfa => $composableBuilder(
+    column: $table.montantBrutFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get detteFcfa => $composableBuilder(
+    column: $table.detteFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantDeduitFcfa => $composableBuilder(
+    column: $table.montantDeduitFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantNetFcfa => $composableBuilder(
+    column: $table.montantNetFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get pertAvecFcfa => $composableBuilder(
+    column: $table.pertAvecFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableOrderingComposer get cycleId {
+    final $$CyclesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableOrderingComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableOrderingComposer get memberId {
+    final $$MembersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableOrderingComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PartageDeductionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PartageDeductionsTable> {
+  $$PartageDeductionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hash =>
+      $composableBuilder(column: $table.hash, builder: (column) => column);
+
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get montantBrutFcfa => $composableBuilder(
+    column: $table.montantBrutFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get detteFcfa =>
+      $composableBuilder(column: $table.detteFcfa, builder: (column) => column);
+
+  GeneratedColumn<int> get montantDeduitFcfa => $composableBuilder(
+    column: $table.montantDeduitFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get montantNetFcfa => $composableBuilder(
+    column: $table.montantNetFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get pertAvecFcfa => $composableBuilder(
+    column: $table.pertAvecFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => column,
+  );
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableAnnotationComposer get cycleId {
+    final $$CyclesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableAnnotationComposer get memberId {
+    final $$MembersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PartageDeductionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PartageDeductionsTable,
+          PartageDeduction,
+          $$PartageDeductionsTableFilterComposer,
+          $$PartageDeductionsTableOrderingComposer,
+          $$PartageDeductionsTableAnnotationComposer,
+          $$PartageDeductionsTableCreateCompanionBuilder,
+          $$PartageDeductionsTableUpdateCompanionBuilder,
+          (PartageDeduction, $$PartageDeductionsTableReferences),
+          PartageDeduction,
+          PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
+        > {
+  $$PartageDeductionsTableTableManager(
+    _$AppDatabase db,
+    $PartageDeductionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PartageDeductionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PartageDeductionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PartageDeductionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                Value<String> hash = const Value.absent(),
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> cycleId = const Value.absent(),
+                Value<String> memberId = const Value.absent(),
+                Value<int> montantBrutFcfa = const Value.absent(),
+                Value<int> detteFcfa = const Value.absent(),
+                Value<int> montantDeduitFcfa = const Value.absent(),
+                Value<int> montantNetFcfa = const Value.absent(),
+                Value<int> pertAvecFcfa = const Value.absent(),
+                Value<String> recordedByPhone = const Value.absent(),
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PartageDeductionsCompanion(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                montantBrutFcfa: montantBrutFcfa,
+                detteFcfa: detteFcfa,
+                montantDeduitFcfa: montantDeduitFcfa,
+                montantNetFcfa: montantNetFcfa,
+                pertAvecFcfa: pertAvecFcfa,
+                recordedByPhone: recordedByPhone,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                required String hash,
+                required String id,
+                required String groupId,
+                required String cycleId,
+                required String memberId,
+                required int montantBrutFcfa,
+                required int detteFcfa,
+                required int montantDeduitFcfa,
+                required int montantNetFcfa,
+                Value<int> pertAvecFcfa = const Value.absent(),
+                required String recordedByPhone,
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PartageDeductionsCompanion.insert(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                montantBrutFcfa: montantBrutFcfa,
+                detteFcfa: detteFcfa,
+                montantDeduitFcfa: montantDeduitFcfa,
+                montantNetFcfa: montantNetFcfa,
+                pertAvecFcfa: pertAvecFcfa,
+                recordedByPhone: recordedByPhone,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PartageDeductionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({groupId = false, cycleId = false, memberId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (groupId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.groupId,
+                                    referencedTable:
+                                        $$PartageDeductionsTableReferences
+                                            ._groupIdTable(db),
+                                    referencedColumn:
+                                        $$PartageDeductionsTableReferences
+                                            ._groupIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (cycleId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cycleId,
+                                    referencedTable:
+                                        $$PartageDeductionsTableReferences
+                                            ._cycleIdTable(db),
+                                    referencedColumn:
+                                        $$PartageDeductionsTableReferences
+                                            ._cycleIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (memberId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.memberId,
+                                    referencedTable:
+                                        $$PartageDeductionsTableReferences
+                                            ._memberIdTable(db),
+                                    referencedColumn:
+                                        $$PartageDeductionsTableReferences
+                                            ._memberIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$PartageDeductionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PartageDeductionsTable,
+      PartageDeduction,
+      $$PartageDeductionsTableFilterComposer,
+      $$PartageDeductionsTableOrderingComposer,
+      $$PartageDeductionsTableAnnotationComposer,
+      $$PartageDeductionsTableCreateCompanionBuilder,
+      $$PartageDeductionsTableUpdateCompanionBuilder,
+      (PartageDeduction, $$PartageDeductionsTableReferences),
+      PartageDeduction,
+      PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
+    >;
+typedef $$SeancesCotisationTableCreateCompanionBuilder =
+    SeancesCotisationCompanion Function({
+      Value<String?> previousHash,
+      required String hash,
+      required String id,
+      required String groupId,
+      required String cycleId,
+      required DateTime date,
+      required String clotureeParPhone,
+      Value<DateTime> clotureeAt,
+      Value<int> rowid,
+    });
+typedef $$SeancesCotisationTableUpdateCompanionBuilder =
+    SeancesCotisationCompanion Function({
+      Value<String?> previousHash,
+      Value<String> hash,
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> cycleId,
+      Value<DateTime> date,
+      Value<String> clotureeParPhone,
+      Value<DateTime> clotureeAt,
+      Value<int> rowid,
+    });
+
+final class $$SeancesCotisationTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $SeancesCotisationTable,
+          SeancesCotisationData
+        > {
+  $$SeancesCotisationTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) =>
+      db.groups.createAlias('seances_cotisation__group_id__groups__id');
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<String>('group_id')!;
+
+    final manager = $$GroupsTableTableManager(
+      $_db,
+      $_db.groups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CyclesTable _cycleIdTable(_$AppDatabase db) =>
+      db.cycles.createAlias('seances_cotisation__cycle_id__cycles__id');
+
+  $$CyclesTableProcessedTableManager get cycleId {
+    final $_column = $_itemColumn<String>('cycle_id')!;
+
+    final manager = $$CyclesTableTableManager(
+      $_db,
+      $_db.cycles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cycleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SeancesCotisationTableFilterComposer
+    extends Composer<_$AppDatabase, $SeancesCotisationTable> {
+  $$SeancesCotisationTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get clotureeParPhone => $composableBuilder(
+    column: $table.clotureeParPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get clotureeAt => $composableBuilder(
+    column: $table.clotureeAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableFilterComposer get cycleId {
+    final $$CyclesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableFilterComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SeancesCotisationTableOrderingComposer
+    extends Composer<_$AppDatabase, $SeancesCotisationTable> {
+  $$SeancesCotisationTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hash => $composableBuilder(
+    column: $table.hash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get clotureeParPhone => $composableBuilder(
+    column: $table.clotureeParPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get clotureeAt => $composableBuilder(
+    column: $table.clotureeAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableOrderingComposer get cycleId {
+    final $$CyclesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableOrderingComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SeancesCotisationTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SeancesCotisationTable> {
+  $$SeancesCotisationTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get previousHash => $composableBuilder(
+    column: $table.previousHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hash =>
+      $composableBuilder(column: $table.hash, builder: (column) => column);
+
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get clotureeParPhone => $composableBuilder(
+    column: $table.clotureeParPhone,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get clotureeAt => $composableBuilder(
+    column: $table.clotureeAt,
+    builder: (column) => column,
+  );
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableAnnotationComposer get cycleId {
+    final $$CyclesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SeancesCotisationTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SeancesCotisationTable,
+          SeancesCotisationData,
+          $$SeancesCotisationTableFilterComposer,
+          $$SeancesCotisationTableOrderingComposer,
+          $$SeancesCotisationTableAnnotationComposer,
+          $$SeancesCotisationTableCreateCompanionBuilder,
+          $$SeancesCotisationTableUpdateCompanionBuilder,
+          (SeancesCotisationData, $$SeancesCotisationTableReferences),
+          SeancesCotisationData,
+          PrefetchHooks Function({bool groupId, bool cycleId})
+        > {
+  $$SeancesCotisationTableTableManager(
+    _$AppDatabase db,
+    $SeancesCotisationTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SeancesCotisationTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SeancesCotisationTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SeancesCotisationTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                Value<String> hash = const Value.absent(),
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> cycleId = const Value.absent(),
+                Value<DateTime> date = const Value.absent(),
+                Value<String> clotureeParPhone = const Value.absent(),
+                Value<DateTime> clotureeAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SeancesCotisationCompanion(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                date: date,
+                clotureeParPhone: clotureeParPhone,
+                clotureeAt: clotureeAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String?> previousHash = const Value.absent(),
+                required String hash,
+                required String id,
+                required String groupId,
+                required String cycleId,
+                required DateTime date,
+                required String clotureeParPhone,
+                Value<DateTime> clotureeAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SeancesCotisationCompanion.insert(
+                previousHash: previousHash,
+                hash: hash,
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                date: date,
+                clotureeParPhone: clotureeParPhone,
+                clotureeAt: clotureeAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$SeancesCotisationTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({groupId = false, cycleId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (groupId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.groupId,
+                                referencedTable:
+                                    $$SeancesCotisationTableReferences
+                                        ._groupIdTable(db),
+                                referencedColumn:
+                                    $$SeancesCotisationTableReferences
+                                        ._groupIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (cycleId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.cycleId,
+                                referencedTable:
+                                    $$SeancesCotisationTableReferences
+                                        ._cycleIdTable(db),
+                                referencedColumn:
+                                    $$SeancesCotisationTableReferences
+                                        ._cycleIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SeancesCotisationTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SeancesCotisationTable,
+      SeancesCotisationData,
+      $$SeancesCotisationTableFilterComposer,
+      $$SeancesCotisationTableOrderingComposer,
+      $$SeancesCotisationTableAnnotationComposer,
+      $$SeancesCotisationTableCreateCompanionBuilder,
+      $$SeancesCotisationTableUpdateCompanionBuilder,
+      (SeancesCotisationData, $$SeancesCotisationTableReferences),
+      SeancesCotisationData,
+      PrefetchHooks Function({bool groupId, bool cycleId})
+    >;
+typedef $$MotifsAmendeTableCreateCompanionBuilder =
+    MotifsAmendeCompanion Function({
+      required String id,
+      required String groupId,
+      required String libelle,
+      required int montantFcfa,
+      Value<String?> description,
+      Value<String?> codeSysteme,
+      Value<bool> actif,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$MotifsAmendeTableUpdateCompanionBuilder =
+    MotifsAmendeCompanion Function({
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> libelle,
+      Value<int> montantFcfa,
+      Value<String?> description,
+      Value<String?> codeSysteme,
+      Value<bool> actif,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$MotifsAmendeTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $MotifsAmendeTable, MotifsAmendeData> {
+  $$MotifsAmendeTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) =>
+      db.groups.createAlias('motifs_amende__group_id__groups__id');
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<String>('group_id')!;
+
+    final manager = $$GroupsTableTableManager(
+      $_db,
+      $_db.groups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MotifsAmendeTableFilterComposer
+    extends Composer<_$AppDatabase, $MotifsAmendeTable> {
+  $$MotifsAmendeTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get libelle => $composableBuilder(
+    column: $table.libelle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get montantFcfa => $composableBuilder(
+    column: $table.montantFcfa,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get codeSysteme => $composableBuilder(
+    column: $table.codeSysteme,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MotifsAmendeTableOrderingComposer
+    extends Composer<_$AppDatabase, $MotifsAmendeTable> {
+  $$MotifsAmendeTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get libelle => $composableBuilder(
+    column: $table.libelle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get montantFcfa => $composableBuilder(
+    column: $table.montantFcfa,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get codeSysteme => $composableBuilder(
+    column: $table.codeSysteme,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MotifsAmendeTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MotifsAmendeTable> {
+  $$MotifsAmendeTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get libelle =>
+      $composableBuilder(column: $table.libelle, builder: (column) => column);
+
+  GeneratedColumn<int> get montantFcfa => $composableBuilder(
+    column: $table.montantFcfa,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get codeSysteme => $composableBuilder(
+    column: $table.codeSysteme,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get actif =>
+      $composableBuilder(column: $table.actif, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MotifsAmendeTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MotifsAmendeTable,
+          MotifsAmendeData,
+          $$MotifsAmendeTableFilterComposer,
+          $$MotifsAmendeTableOrderingComposer,
+          $$MotifsAmendeTableAnnotationComposer,
+          $$MotifsAmendeTableCreateCompanionBuilder,
+          $$MotifsAmendeTableUpdateCompanionBuilder,
+          (MotifsAmendeData, $$MotifsAmendeTableReferences),
+          MotifsAmendeData,
+          PrefetchHooks Function({bool groupId})
+        > {
+  $$MotifsAmendeTableTableManager(_$AppDatabase db, $MotifsAmendeTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MotifsAmendeTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MotifsAmendeTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MotifsAmendeTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> libelle = const Value.absent(),
+                Value<int> montantFcfa = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> codeSysteme = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MotifsAmendeCompanion(
+                id: id,
+                groupId: groupId,
+                libelle: libelle,
+                montantFcfa: montantFcfa,
+                description: description,
+                codeSysteme: codeSysteme,
+                actif: actif,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String groupId,
+                required String libelle,
+                required int montantFcfa,
+                Value<String?> description = const Value.absent(),
+                Value<String?> codeSysteme = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => MotifsAmendeCompanion.insert(
+                id: id,
+                groupId: groupId,
+                libelle: libelle,
+                montantFcfa: montantFcfa,
+                description: description,
+                codeSysteme: codeSysteme,
+                actif: actif,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$MotifsAmendeTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({groupId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (groupId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.groupId,
+                                referencedTable: $$MotifsAmendeTableReferences
+                                    ._groupIdTable(db),
+                                referencedColumn: $$MotifsAmendeTableReferences
+                                    ._groupIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$MotifsAmendeTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MotifsAmendeTable,
+      MotifsAmendeData,
+      $$MotifsAmendeTableFilterComposer,
+      $$MotifsAmendeTableOrderingComposer,
+      $$MotifsAmendeTableAnnotationComposer,
+      $$MotifsAmendeTableCreateCompanionBuilder,
+      $$MotifsAmendeTableUpdateCompanionBuilder,
+      (MotifsAmendeData, $$MotifsAmendeTableReferences),
+      MotifsAmendeData,
+      PrefetchHooks Function({bool groupId})
+    >;
+typedef $$PartagePaiementConfirmationsTableCreateCompanionBuilder =
+    PartagePaiementConfirmationsCompanion Function({
+      required String id,
+      required String groupId,
+      required String cycleId,
+      required String memberId,
+      Value<DateTime> confirmedAt,
+      required String confirmedByPhone,
+      Value<int> rowid,
+    });
+typedef $$PartagePaiementConfirmationsTableUpdateCompanionBuilder =
+    PartagePaiementConfirmationsCompanion Function({
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> cycleId,
+      Value<String> memberId,
+      Value<DateTime> confirmedAt,
+      Value<String> confirmedByPhone,
+      Value<int> rowid,
+    });
+
+final class $$PartagePaiementConfirmationsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $PartagePaiementConfirmationsTable,
+          PartagePaiementConfirmation
+        > {
+  $$PartagePaiementConfirmationsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) => db.groups.createAlias(
+    'partage_paiement_confirmations__group_id__groups__id',
+  );
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<String>('group_id')!;
+
+    final manager = $$GroupsTableTableManager(
+      $_db,
+      $_db.groups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CyclesTable _cycleIdTable(_$AppDatabase db) => db.cycles.createAlias(
+    'partage_paiement_confirmations__cycle_id__cycles__id',
+  );
+
+  $$CyclesTableProcessedTableManager get cycleId {
+    final $_column = $_itemColumn<String>('cycle_id')!;
+
+    final manager = $$CyclesTableTableManager(
+      $_db,
+      $_db.cycles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cycleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $MembersTable _memberIdTable(_$AppDatabase db) => db.members
+      .createAlias('partage_paiement_confirmations__member_id__members__id');
+
+  $$MembersTableProcessedTableManager get memberId {
+    final $_column = $_itemColumn<String>('member_id')!;
+
+    final manager = $$MembersTableTableManager(
+      $_db,
+      $_db.members,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_memberIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PartagePaiementConfirmationsTableFilterComposer
+    extends Composer<_$AppDatabase, $PartagePaiementConfirmationsTable> {
+  $$PartagePaiementConfirmationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get confirmedAt => $composableBuilder(
+    column: $table.confirmedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get confirmedByPhone => $composableBuilder(
+    column: $table.confirmedByPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableFilterComposer get cycleId {
+    final $$CyclesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableFilterComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableFilterComposer get memberId {
+    final $$MembersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableFilterComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PartagePaiementConfirmationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PartagePaiementConfirmationsTable> {
+  $$PartagePaiementConfirmationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get confirmedAt => $composableBuilder(
+    column: $table.confirmedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get confirmedByPhone => $composableBuilder(
+    column: $table.confirmedByPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableOrderingComposer get cycleId {
+    final $$CyclesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableOrderingComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableOrderingComposer get memberId {
+    final $$MembersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableOrderingComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PartagePaiementConfirmationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PartagePaiementConfirmationsTable> {
+  $$PartagePaiementConfirmationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get confirmedAt => $composableBuilder(
+    column: $table.confirmedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get confirmedByPhone => $composableBuilder(
+    column: $table.confirmedByPhone,
+    builder: (column) => column,
+  );
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableAnnotationComposer get cycleId {
+    final $$CyclesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableAnnotationComposer get memberId {
+    final $$MembersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PartagePaiementConfirmationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PartagePaiementConfirmationsTable,
+          PartagePaiementConfirmation,
+          $$PartagePaiementConfirmationsTableFilterComposer,
+          $$PartagePaiementConfirmationsTableOrderingComposer,
+          $$PartagePaiementConfirmationsTableAnnotationComposer,
+          $$PartagePaiementConfirmationsTableCreateCompanionBuilder,
+          $$PartagePaiementConfirmationsTableUpdateCompanionBuilder,
+          (
+            PartagePaiementConfirmation,
+            $$PartagePaiementConfirmationsTableReferences,
+          ),
+          PartagePaiementConfirmation,
+          PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
+        > {
+  $$PartagePaiementConfirmationsTableTableManager(
+    _$AppDatabase db,
+    $PartagePaiementConfirmationsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PartagePaiementConfirmationsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$PartagePaiementConfirmationsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PartagePaiementConfirmationsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> cycleId = const Value.absent(),
+                Value<String> memberId = const Value.absent(),
+                Value<DateTime> confirmedAt = const Value.absent(),
+                Value<String> confirmedByPhone = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PartagePaiementConfirmationsCompanion(
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                confirmedAt: confirmedAt,
+                confirmedByPhone: confirmedByPhone,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String groupId,
+                required String cycleId,
+                required String memberId,
+                Value<DateTime> confirmedAt = const Value.absent(),
+                required String confirmedByPhone,
+                Value<int> rowid = const Value.absent(),
+              }) => PartagePaiementConfirmationsCompanion.insert(
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                confirmedAt: confirmedAt,
+                confirmedByPhone: confirmedByPhone,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PartagePaiementConfirmationsTableReferences(db, table, e),
                 ),
               )
               .toList(),
@@ -17307,10 +32971,10 @@ class $$FondsSolidariteContributionsTableTableManager
                                 currentTable: table,
                                 currentColumn: table.groupId,
                                 referencedTable:
-                                    $$FondsSolidariteContributionsTableReferences
+                                    $$PartagePaiementConfirmationsTableReferences
                                         ._groupIdTable(db),
                                 referencedColumn:
-                                    $$FondsSolidariteContributionsTableReferences
+                                    $$PartagePaiementConfirmationsTableReferences
                                         ._groupIdTable(db)
                                         .id,
                               )
@@ -17322,10 +32986,10 @@ class $$FondsSolidariteContributionsTableTableManager
                                 currentTable: table,
                                 currentColumn: table.cycleId,
                                 referencedTable:
-                                    $$FondsSolidariteContributionsTableReferences
+                                    $$PartagePaiementConfirmationsTableReferences
                                         ._cycleIdTable(db),
                                 referencedColumn:
-                                    $$FondsSolidariteContributionsTableReferences
+                                    $$PartagePaiementConfirmationsTableReferences
                                         ._cycleIdTable(db)
                                         .id,
                               )
@@ -17337,10 +33001,10 @@ class $$FondsSolidariteContributionsTableTableManager
                                 currentTable: table,
                                 currentColumn: table.memberId,
                                 referencedTable:
-                                    $$FondsSolidariteContributionsTableReferences
+                                    $$PartagePaiementConfirmationsTableReferences
                                         ._memberIdTable(db),
                                 referencedColumn:
-                                    $$FondsSolidariteContributionsTableReferences
+                                    $$PartagePaiementConfirmationsTableReferences
                                         ._memberIdTable(db)
                                         .id,
                               )
@@ -17358,21 +33022,1043 @@ class $$FondsSolidariteContributionsTableTableManager
       );
 }
 
-typedef $$FondsSolidariteContributionsTableProcessedTableManager =
+typedef $$PartagePaiementConfirmationsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $FondsSolidariteContributionsTable,
-      FondsSolidariteContribution,
-      $$FondsSolidariteContributionsTableFilterComposer,
-      $$FondsSolidariteContributionsTableOrderingComposer,
-      $$FondsSolidariteContributionsTableAnnotationComposer,
-      $$FondsSolidariteContributionsTableCreateCompanionBuilder,
-      $$FondsSolidariteContributionsTableUpdateCompanionBuilder,
+      $PartagePaiementConfirmationsTable,
+      PartagePaiementConfirmation,
+      $$PartagePaiementConfirmationsTableFilterComposer,
+      $$PartagePaiementConfirmationsTableOrderingComposer,
+      $$PartagePaiementConfirmationsTableAnnotationComposer,
+      $$PartagePaiementConfirmationsTableCreateCompanionBuilder,
+      $$PartagePaiementConfirmationsTableUpdateCompanionBuilder,
       (
-        FondsSolidariteContribution,
-        $$FondsSolidariteContributionsTableReferences,
+        PartagePaiementConfirmation,
+        $$PartagePaiementConfirmationsTableReferences,
       ),
-      FondsSolidariteContribution,
+      PartagePaiementConfirmation,
+      PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
+    >;
+typedef $$CarnetsTableCreateCompanionBuilder =
+    CarnetsCompanion Function({
+      required String id,
+      required String groupId,
+      required String memberId,
+      required int carnetNumero,
+      required String numeroSerie,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+typedef $$CarnetsTableUpdateCompanionBuilder =
+    CarnetsCompanion Function({
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> memberId,
+      Value<int> carnetNumero,
+      Value<String> numeroSerie,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$CarnetsTableReferences
+    extends BaseReferences<_$AppDatabase, $CarnetsTable, Carnet> {
+  $$CarnetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) =>
+      db.groups.createAlias('carnets__group_id__groups__id');
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<String>('group_id')!;
+
+    final manager = $$GroupsTableTableManager(
+      $_db,
+      $_db.groups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $MembersTable _memberIdTable(_$AppDatabase db) =>
+      db.members.createAlias('carnets__member_id__members__id');
+
+  $$MembersTableProcessedTableManager get memberId {
+    final $_column = $_itemColumn<String>('member_id')!;
+
+    final manager = $$MembersTableTableManager(
+      $_db,
+      $_db.members,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_memberIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CarnetsTableFilterComposer
+    extends Composer<_$AppDatabase, $CarnetsTable> {
+  $$CarnetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get numeroSerie => $composableBuilder(
+    column: $table.numeroSerie,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableFilterComposer get memberId {
+    final $$MembersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableFilterComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CarnetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CarnetsTable> {
+  $$CarnetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get numeroSerie => $composableBuilder(
+    column: $table.numeroSerie,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableOrderingComposer get memberId {
+    final $$MembersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableOrderingComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CarnetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CarnetsTable> {
+  $$CarnetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get numeroSerie => $composableBuilder(
+    column: $table.numeroSerie,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableAnnotationComposer get memberId {
+    final $$MembersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CarnetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CarnetsTable,
+          Carnet,
+          $$CarnetsTableFilterComposer,
+          $$CarnetsTableOrderingComposer,
+          $$CarnetsTableAnnotationComposer,
+          $$CarnetsTableCreateCompanionBuilder,
+          $$CarnetsTableUpdateCompanionBuilder,
+          (Carnet, $$CarnetsTableReferences),
+          Carnet,
+          PrefetchHooks Function({bool groupId, bool memberId})
+        > {
+  $$CarnetsTableTableManager(_$AppDatabase db, $CarnetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CarnetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CarnetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CarnetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> memberId = const Value.absent(),
+                Value<int> carnetNumero = const Value.absent(),
+                Value<String> numeroSerie = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CarnetsCompanion(
+                id: id,
+                groupId: groupId,
+                memberId: memberId,
+                carnetNumero: carnetNumero,
+                numeroSerie: numeroSerie,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String groupId,
+                required String memberId,
+                required int carnetNumero,
+                required String numeroSerie,
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CarnetsCompanion.insert(
+                id: id,
+                groupId: groupId,
+                memberId: memberId,
+                carnetNumero: carnetNumero,
+                numeroSerie: numeroSerie,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$CarnetsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({groupId = false, memberId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (groupId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.groupId,
+                                referencedTable: $$CarnetsTableReferences
+                                    ._groupIdTable(db),
+                                referencedColumn: $$CarnetsTableReferences
+                                    ._groupIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (memberId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.memberId,
+                                referencedTable: $$CarnetsTableReferences
+                                    ._memberIdTable(db),
+                                referencedColumn: $$CarnetsTableReferences
+                                    ._memberIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CarnetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CarnetsTable,
+      Carnet,
+      $$CarnetsTableFilterComposer,
+      $$CarnetsTableOrderingComposer,
+      $$CarnetsTableAnnotationComposer,
+      $$CarnetsTableCreateCompanionBuilder,
+      $$CarnetsTableUpdateCompanionBuilder,
+      (Carnet, $$CarnetsTableReferences),
+      Carnet,
+      PrefetchHooks Function({bool groupId, bool memberId})
+    >;
+typedef $$PresenceAnticipeeTableCreateCompanionBuilder =
+    PresenceAnticipeeCompanion Function({
+      required String id,
+      required String groupId,
+      required String cycleId,
+      required String memberId,
+      required int carnetNumero,
+      required DateTime echeanceDate,
+      required String codeSysteme,
+      required String recordedByPhone,
+      required DateTime recordedAt,
+      Value<int> rowid,
+    });
+typedef $$PresenceAnticipeeTableUpdateCompanionBuilder =
+    PresenceAnticipeeCompanion Function({
+      Value<String> id,
+      Value<String> groupId,
+      Value<String> cycleId,
+      Value<String> memberId,
+      Value<int> carnetNumero,
+      Value<DateTime> echeanceDate,
+      Value<String> codeSysteme,
+      Value<String> recordedByPhone,
+      Value<DateTime> recordedAt,
+      Value<int> rowid,
+    });
+
+final class $$PresenceAnticipeeTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $PresenceAnticipeeTable,
+          PresenceAnticipeeData
+        > {
+  $$PresenceAnticipeeTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $GroupsTable _groupIdTable(_$AppDatabase db) =>
+      db.groups.createAlias('presence_anticipee__group_id__groups__id');
+
+  $$GroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<String>('group_id')!;
+
+    final manager = $$GroupsTableTableManager(
+      $_db,
+      $_db.groups,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $CyclesTable _cycleIdTable(_$AppDatabase db) =>
+      db.cycles.createAlias('presence_anticipee__cycle_id__cycles__id');
+
+  $$CyclesTableProcessedTableManager get cycleId {
+    final $_column = $_itemColumn<String>('cycle_id')!;
+
+    final manager = $$CyclesTableTableManager(
+      $_db,
+      $_db.cycles,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_cycleIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $MembersTable _memberIdTable(_$AppDatabase db) =>
+      db.members.createAlias('presence_anticipee__member_id__members__id');
+
+  $$MembersTableProcessedTableManager get memberId {
+    final $_column = $_itemColumn<String>('member_id')!;
+
+    final manager = $$MembersTableTableManager(
+      $_db,
+      $_db.members,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_memberIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PresenceAnticipeeTableFilterComposer
+    extends Composer<_$AppDatabase, $PresenceAnticipeeTable> {
+  $$PresenceAnticipeeTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get codeSysteme => $composableBuilder(
+    column: $table.codeSysteme,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GroupsTableFilterComposer get groupId {
+    final $$GroupsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableFilterComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableFilterComposer get cycleId {
+    final $$CyclesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableFilterComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableFilterComposer get memberId {
+    final $$MembersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableFilterComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PresenceAnticipeeTableOrderingComposer
+    extends Composer<_$AppDatabase, $PresenceAnticipeeTable> {
+  $$PresenceAnticipeeTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get codeSysteme => $composableBuilder(
+    column: $table.codeSysteme,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GroupsTableOrderingComposer get groupId {
+    final $$GroupsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableOrderingComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableOrderingComposer get cycleId {
+    final $$CyclesTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableOrderingComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableOrderingComposer get memberId {
+    final $$MembersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableOrderingComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PresenceAnticipeeTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PresenceAnticipeeTable> {
+  $$PresenceAnticipeeTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get carnetNumero => $composableBuilder(
+    column: $table.carnetNumero,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get echeanceDate => $composableBuilder(
+    column: $table.echeanceDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get codeSysteme => $composableBuilder(
+    column: $table.codeSysteme,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get recordedByPhone => $composableBuilder(
+    column: $table.recordedByPhone,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get recordedAt => $composableBuilder(
+    column: $table.recordedAt,
+    builder: (column) => column,
+  );
+
+  $$GroupsTableAnnotationComposer get groupId {
+    final $$GroupsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.groupId,
+      referencedTable: $db.groups,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GroupsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.groups,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$CyclesTableAnnotationComposer get cycleId {
+    final $$CyclesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.cycleId,
+      referencedTable: $db.cycles,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CyclesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cycles,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MembersTableAnnotationComposer get memberId {
+    final $$MembersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.memberId,
+      referencedTable: $db.members,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MembersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.members,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PresenceAnticipeeTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PresenceAnticipeeTable,
+          PresenceAnticipeeData,
+          $$PresenceAnticipeeTableFilterComposer,
+          $$PresenceAnticipeeTableOrderingComposer,
+          $$PresenceAnticipeeTableAnnotationComposer,
+          $$PresenceAnticipeeTableCreateCompanionBuilder,
+          $$PresenceAnticipeeTableUpdateCompanionBuilder,
+          (PresenceAnticipeeData, $$PresenceAnticipeeTableReferences),
+          PresenceAnticipeeData,
+          PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
+        > {
+  $$PresenceAnticipeeTableTableManager(
+    _$AppDatabase db,
+    $PresenceAnticipeeTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PresenceAnticipeeTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PresenceAnticipeeTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PresenceAnticipeeTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> groupId = const Value.absent(),
+                Value<String> cycleId = const Value.absent(),
+                Value<String> memberId = const Value.absent(),
+                Value<int> carnetNumero = const Value.absent(),
+                Value<DateTime> echeanceDate = const Value.absent(),
+                Value<String> codeSysteme = const Value.absent(),
+                Value<String> recordedByPhone = const Value.absent(),
+                Value<DateTime> recordedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PresenceAnticipeeCompanion(
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                carnetNumero: carnetNumero,
+                echeanceDate: echeanceDate,
+                codeSysteme: codeSysteme,
+                recordedByPhone: recordedByPhone,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String groupId,
+                required String cycleId,
+                required String memberId,
+                required int carnetNumero,
+                required DateTime echeanceDate,
+                required String codeSysteme,
+                required String recordedByPhone,
+                required DateTime recordedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => PresenceAnticipeeCompanion.insert(
+                id: id,
+                groupId: groupId,
+                cycleId: cycleId,
+                memberId: memberId,
+                carnetNumero: carnetNumero,
+                echeanceDate: echeanceDate,
+                codeSysteme: codeSysteme,
+                recordedByPhone: recordedByPhone,
+                recordedAt: recordedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PresenceAnticipeeTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({groupId = false, cycleId = false, memberId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (groupId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.groupId,
+                                    referencedTable:
+                                        $$PresenceAnticipeeTableReferences
+                                            ._groupIdTable(db),
+                                    referencedColumn:
+                                        $$PresenceAnticipeeTableReferences
+                                            ._groupIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (cycleId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.cycleId,
+                                    referencedTable:
+                                        $$PresenceAnticipeeTableReferences
+                                            ._cycleIdTable(db),
+                                    referencedColumn:
+                                        $$PresenceAnticipeeTableReferences
+                                            ._cycleIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+                        if (memberId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.memberId,
+                                    referencedTable:
+                                        $$PresenceAnticipeeTableReferences
+                                            ._memberIdTable(db),
+                                    referencedColumn:
+                                        $$PresenceAnticipeeTableReferences
+                                            ._memberIdTable(db)
+                                            .id,
+                                  )
+                                  as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$PresenceAnticipeeTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PresenceAnticipeeTable,
+      PresenceAnticipeeData,
+      $$PresenceAnticipeeTableFilterComposer,
+      $$PresenceAnticipeeTableOrderingComposer,
+      $$PresenceAnticipeeTableAnnotationComposer,
+      $$PresenceAnticipeeTableCreateCompanionBuilder,
+      $$PresenceAnticipeeTableUpdateCompanionBuilder,
+      (PresenceAnticipeeData, $$PresenceAnticipeeTableReferences),
+      PresenceAnticipeeData,
       PrefetchHooks Function({bool groupId, bool cycleId, bool memberId})
     >;
 
@@ -17397,6 +34083,8 @@ class $AppDatabaseManager {
       $$CotisationsTableTableManager(_db, _db.cotisations);
   $$CarnetsEngagesTableTableManager get carnetsEngages =>
       $$CarnetsEngagesTableTableManager(_db, _db.carnetsEngages);
+  $$PretDemandesTableTableManager get pretDemandes =>
+      $$PretDemandesTableTableManager(_db, _db.pretDemandes);
   $$PretsTableTableManager get prets =>
       $$PretsTableTableManager(_db, _db.prets);
   $$PretConfirmationsTableTableManager get pretConfirmations =>
@@ -17405,14 +34093,42 @@ class $AppDatabaseManager {
       $$PretRemboursementsTableTableManager(_db, _db.pretRemboursements);
   $$PretAnnulationsTableTableManager get pretAnnulations =>
       $$PretAnnulationsTableTableManager(_db, _db.pretAnnulations);
+  $$PretDemandeRefusTableTableManager get pretDemandeRefus =>
+      $$PretDemandeRefusTableTableManager(_db, _db.pretDemandeRefus);
   $$AmendesTableTableManager get amendes =>
       $$AmendesTableTableManager(_db, _db.amendes);
   $$AmendeAnnulationsTableTableManager get amendeAnnulations =>
       $$AmendeAnnulationsTableTableManager(_db, _db.amendeAnnulations);
+  $$AmendePaiementsTableTableManager get amendePaiements =>
+      $$AmendePaiementsTableTableManager(_db, _db.amendePaiements);
+  $$CotisationsExceptionnellesTableTableManager
+  get cotisationsExceptionnelles =>
+      $$CotisationsExceptionnellesTableTableManager(
+        _db,
+        _db.cotisationsExceptionnelles,
+      );
   $$FondsSolidariteContributionsTableTableManager
   get fondsSolidariteContributions =>
       $$FondsSolidariteContributionsTableTableManager(
         _db,
         _db.fondsSolidariteContributions,
       );
+  $$EcheancesTableTableManager get echeances =>
+      $$EcheancesTableTableManager(_db, _db.echeances);
+  $$PartageDeductionsTableTableManager get partageDeductions =>
+      $$PartageDeductionsTableTableManager(_db, _db.partageDeductions);
+  $$SeancesCotisationTableTableManager get seancesCotisation =>
+      $$SeancesCotisationTableTableManager(_db, _db.seancesCotisation);
+  $$MotifsAmendeTableTableManager get motifsAmende =>
+      $$MotifsAmendeTableTableManager(_db, _db.motifsAmende);
+  $$PartagePaiementConfirmationsTableTableManager
+  get partagePaiementConfirmations =>
+      $$PartagePaiementConfirmationsTableTableManager(
+        _db,
+        _db.partagePaiementConfirmations,
+      );
+  $$CarnetsTableTableManager get carnets =>
+      $$CarnetsTableTableManager(_db, _db.carnets);
+  $$PresenceAnticipeeTableTableManager get presenceAnticipee =>
+      $$PresenceAnticipeeTableTableManager(_db, _db.presenceAnticipee);
 }

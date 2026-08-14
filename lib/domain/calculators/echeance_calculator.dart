@@ -1,9 +1,12 @@
-/// Calcule les dates d'échéance de cotisation et le solde dû cumulé d'un
-/// membre — skill avec-business-rules, section "Retard de cotisation" :
-/// les cotisations tombent à date fixe (jour de paiement configuré sur
-/// le groupe), pas sur une simple période glissante. Un membre qui rate
-/// une échéance voit le manque s'accumuler sur la suivante — jamais
-/// remis à zéro silencieusement.
+/// Calcule les dates d'échéance de cotisation d'un membre — skill
+/// avec-business-rules, section "Retard de cotisation" : les
+/// cotisations tombent à date fixe (jour de paiement configuré sur le
+/// groupe), pas sur une simple période glissante.
+///
+/// **Pas de rattrapage** (décision du fondateur, 2026-08-09) : une
+/// échéance manquée n'est jamais rattrapable, seule l'amende prédéfinie
+/// s'applique — ce calculateur ne cumule donc plus aucun "solde dû", il
+/// se limite à produire les dates d'échéance elles-mêmes.
 ///
 /// Pure Dart, aucune dépendance à la base — testable directement, comme
 /// [EndOfCycleCalculator].
@@ -69,19 +72,27 @@ class EcheanceCalculator {
     }
   }
 
-  /// Solde dû cumulé à ce jour pour un membre : (nombre d'échéances
-  /// passées × carnets engagés × valeur du carnet) − ce qu'il a déjà payé
-  /// sur ce cycle. Jamais négatif (un membre en avance doit 0, pas une
-  /// dette négative).
-  int soldeDuFcfa({
-    required List<DateTime> echeancesPassees,
-    required int carnetsEngages,
-    required int valeurCarnetFcfa,
-    required int montantDejaPayeFcfa,
-  }) {
-    final duTotal = echeancesPassees.length * carnetsEngages * valeurCarnetFcfa;
-    final solde = duTotal - montantDejaPayeFcfa;
-    return solde > 0 ? solde : 0;
+  /// Un carnet peut recevoir entre 1 et 5 parts **par jour au total**
+  /// (règle confirmée par un responsable de terrain) — pas parce qu'un
+  /// membre rattrape des semaines manquées (ça n'existe plus), mais
+  /// parce qu'il choisit de déposer plus qu'une part ce jour-là.
+  /// Plusieurs transactions le même jour pour le même carnet
+  /// s'additionnent, jamais au-delà de ce plafond (voir
+  /// [AppDatabase.partsDejaAjouteesAujourdhui]).
+  static const int maxPartsParTransaction = 5;
+
+  int montantMaxTransactionFcfa(int valeurPartFcfa) =>
+      maxPartsParTransaction * valeurPartFcfa;
+
+  /// Vrai si [montantFcfa] est un multiple exact de [valeurPartFcfa],
+  /// entre 1 et 5 fois cette valeur — "aucun montant intermédiaire n'est
+  /// autorisé" (règle confirmée par un responsable de terrain, voir
+  /// DECISIONS.md).
+  bool estUnMontantValide({required int montantFcfa, required int valeurPartFcfa}) {
+    if (valeurPartFcfa <= 0 || montantFcfa <= 0) return false;
+    if (montantFcfa % valeurPartFcfa != 0) return false;
+    final parts = montantFcfa ~/ valeurPartFcfa;
+    return parts >= 1 && parts <= maxPartsParTransaction;
   }
 
   static DateTime _dateSeule(DateTime d) => DateTime(d.year, d.month, d.day);

@@ -37,6 +37,13 @@ class Cycles extends Table {
   /// en_cours | cloture
   TextColumn get status => text().withDefault(const Constant('en_cours'))();
 
+  /// Renseigné dès que la toute première journée de cotisation du cycle
+  /// est clôturée ([AppDatabase.cloturerJourneeCotisation]) — à partir de
+  /// là, plus aucun membre ne peut être ajouté à ce cycle (voir
+  /// DECISIONS.md, "Clôture de la journée de cotisation"). Null tant que
+  /// la liste des participants reste ouverte.
+  DateTimeColumn get inscriptionsFermeesAt => dateTime().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

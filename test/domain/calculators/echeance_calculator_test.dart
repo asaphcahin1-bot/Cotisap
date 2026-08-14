@@ -110,26 +110,26 @@ void main() {
     });
   });
 
-  group('soldeDuFcfa', () {
-    test('cumule le montant dû sur plusieurs échéances non couvertes (scénario Mr AB)', () {
-      // Carnet à 500F, 3 échéances passées, une seule payée (500F).
-      final solde = calc.soldeDuFcfa(
-        echeancesPassees: [DateTime(2024, 1, 4), DateTime(2024, 1, 11), DateTime(2024, 1, 18)],
-        carnetsEngages: 1,
-        valeurCarnetFcfa: 500,
-        montantDejaPayeFcfa: 500,
-      );
-      expect(solde, 1000); // 2 échéances manquées x 500F
+  group('montantMaxTransactionFcfa / estUnMontantValide', () {
+    test('une transaction ne peut jamais dépasser 5 parts', () {
+      expect(calc.montantMaxTransactionFcfa(500), 2500);
     });
 
-    test('un membre à jour ou en avance doit 0, jamais un solde négatif', () {
-      final solde = calc.soldeDuFcfa(
-        echeancesPassees: [DateTime(2024, 1, 4)],
-        carnetsEngages: 1,
-        valeurCarnetFcfa: 500,
-        montantDejaPayeFcfa: 2000,
-      );
-      expect(solde, 0);
+    test('un montant multiple exact entre 1x et 5x la valeur de la part est valide', () {
+      expect(calc.estUnMontantValide(montantFcfa: 500, valeurPartFcfa: 500), isTrue);
+      expect(calc.estUnMontantValide(montantFcfa: 2500, valeurPartFcfa: 500), isTrue);
+    });
+
+    test('un montant intermédiaire (pas un multiple exact) est invalide', () {
+      expect(calc.estUnMontantValide(montantFcfa: 700, valeurPartFcfa: 500), isFalse);
+    });
+
+    test('un montant au-delà de 5 parts est invalide', () {
+      expect(calc.estUnMontantValide(montantFcfa: 3000, valeurPartFcfa: 500), isFalse);
+    });
+
+    test('zéro ou négatif est invalide', () {
+      expect(calc.estUnMontantValide(montantFcfa: 0, valeurPartFcfa: 500), isFalse);
     });
   });
 }

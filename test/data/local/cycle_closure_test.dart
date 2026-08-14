@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cotisapp/core/app_clock.dart';
 import 'package:cotisapp/data/local/database.dart';
 
 void main() {
@@ -80,6 +81,14 @@ void main() {
       partsCount: 3,
       recordedByPhone: '+2250000099',
     );
+    // Condition de clôture (voir DECISIONS.md, "Clôture de cycle
+    // conditionnée au paiement de tous les membres").
+    await db.confirmerPaiementMembre(
+      groupId: groupId,
+      cycleId: cycle1Id,
+      memberId: memberId,
+      confirmedByPhone: '+2250000099',
+    );
 
     final cycle2Id = await db.cloturerCycleEtOuvrirSuivant(
       groupId: groupId,
@@ -119,15 +128,33 @@ void main() {
   test('pretsNonSoldesDuCycle signale un prêt confirmé partiellement remboursé, ignore les autres',
       () async {
     final groupId = await db.creerGroupe(
-        name: 'Test', cycleDurationMonths: 9, meetingFrequency: 'mensuelle');
+        name: 'Test',
+        cycleDurationMonths: 9,
+        meetingFrequency: 'mensuelle',
+        paymentDayOfMonth1: 5);
     final membre1 = await db.ajouterMembre(
         groupId: groupId, fullName: 'Aya Kone', phoneNumber: '+2250000001');
     final membre2 = await db.ajouterMembre(
         groupId: groupId, fullName: 'Kofi Yao', phoneNumber: '+2250000002');
     final membre3 = await db.ajouterMembre(
         groupId: groupId, fullName: 'Awa Traore', phoneNumber: '+2250000003');
+    final debutCycle = DateTime(2024, 1, 5);
     final cycleId = await db.ouvrirCycle(
-        groupId: groupId, cycleNumber: 1, partValueFcfa: 500, interestRatePercent: 10);
+        groupId: groupId,
+        cycleNumber: 1,
+        partValueFcfa: 500,
+        interestRatePercent: 10,
+        startedAt: debutCycle);
+    // Fenêtre de crédit + caisse disponible (voir DECISIONS.md).
+    await db.enregistrerCotisationCash(
+      groupId: groupId,
+      cycleId: cycleId,
+      memberId: membre1,
+      partsCount: 60, // 30 000 F, largement au-dessus des 3 prêts
+      recordedByPhone: '+2250000099',
+    );
+    AppClock.definir(DateTime(2024, 2, 5)); // 2e réunion -> fenêtre ouverte
+    addTearDown(() => AppClock.definir(null));
 
     // Prêt confirmé, partiellement remboursé -> doit être signalé.
     final pretNonSolde = await db.enregistrerPret(

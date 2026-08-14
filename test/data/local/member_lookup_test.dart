@@ -55,6 +55,7 @@ void main() {
       interestRatePercent: 10,
       initiatedByPhone: '+225099',
       confirmationCode: '123456',
+      provenance: 'importe',
     );
 
     final cotisationsAya = await db.cotisationsDuMembre(ayaId, cycleId);

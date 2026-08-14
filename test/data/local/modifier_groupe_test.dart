@@ -34,7 +34,6 @@ void main() {
       paymentDayOfWeek: 4,
       partValueFcfa: 1000,
       interestRatePercent: 12,
-      lateFeeFcfa: 200,
       loanDurationDays: 60,
     );
 
@@ -48,7 +47,6 @@ void main() {
     expect(groupe.paymentDayOfMonth1, isNull); // remplacé, plus mensuel
     expect(cycle.partValueFcfa, 1000);
     expect(cycle.interestRatePercent, 12);
-    expect(cycle.lateFeeFcfa, 200);
     expect(cycle.loanDurationDays, 60);
   });
 
@@ -79,7 +77,6 @@ void main() {
         paymentDayOfMonth1: 5,
         partValueFcfa: 999,
         interestRatePercent: 8,
-        lateFeeFcfa: 0,
         loanDurationDays: 90,
       ),
       throwsStateError,

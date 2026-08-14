@@ -1,5 +1,11 @@
 # Roadmap — CotisApp
 
+> **Retours terrain en cours de collecte** : voir RETOURS_TERRAIN.md —
+> plusieurs présidents/agents ont testé l'app et fait remonter des
+> observations, dont certaines contredisent des décisions déjà prises
+> (voir ce document). Rien n'y est codé ni tranché tant que le
+> fondateur n'a pas confirmé, potentiellement après d'autres retours.
+
 ## Fait (cette étape — V0, hors ligne, sans paiement)
 
 - Groupes, membres, cycles
@@ -76,6 +82,56 @@
 - Horloge de test (`AppClock`, mode debug uniquement) : simuler une
   date pour dérouler plusieurs semaines/mois de test sans attendre ni
   toucher à l'horloge du téléphone.
+- Registre d'échéances (`Echeances`, ajout seul) : chaque échéance close
+  est désormais tracée payée ou non — y compris dans un groupe sans
+  amende automatique, ce que l'ancien mécanisme ne faisait pas. Écran
+  Historique des cotisations (icône dans la barre de l'écran
+  Cotisations) : groupé par date, dépliable, statut Payé/Non payé par
+  membre.
+- Fusion cotisation + amende : l'écran Cotisations affiche et encaisse
+  en une seule fois l'arriéré de cotisation et les amendes non soldées
+  d'un membre, composition toujours détaillée à l'écran.
+- Déduction des dettes au partage de fin de cycle — **amendes non
+  soldées + solde de prêt non remboursé** (l'arriéré de cotisation n'en
+  fait plus partie depuis le 9 août, voir plus bas), avec perte pour
+  l'AVEC enregistrée (`PartageDeductions`) si la dette dépasse le
+  montant à percevoir — voir DECISIONS.md.
+- Refonte carnet/part (2026-08-08, règles confirmées par un responsable
+  de terrain) : un membre détient 1 ou 2 carnets (jamais un
+  multiplicateur libre 1-5), chaque carnet suit ses échéances
+  indépendamment. Écran Cotisations réécrit (saisie par carnet). Voir
+  DECISIONS.md.
+- Clôture explicite de la journée de cotisation par l'agent — remplace
+  la détection automatique basée sur l'horloge. Ferme les inscriptions
+  du cycle dès la première séance clôturée, annulable si rien ne s'est
+  passé depuis. Voir DECISIONS.md.
+- Correction du bug `joinedAt` : un membre ajouté en cours de cycle
+  n'est plus jamais facturé pour des échéances antérieures à son
+  entrée dans le groupe.
+- **Amende seule, jamais de rattrapage** (2026-08-09, tranché après
+  test réel) : une échéance manquée reste définitivement à 0 part,
+  seule l'amende prédéfinie s'applique — remplace le mécanisme de
+  rattrapage (jusqu'à 5 parts pour rattraper) prévu la veille. Un
+  carnet peut toujours recevoir 1 à 5 parts par jour, mais seulement
+  par choix volontaire du membre, jamais pour compenser une autre date.
+  Voir DECISIONS.md.
+- Correction du plafond journalier (2026-08-09, trouvée par les tests) :
+  le cumul de parts/jour se basait sur l'horodatage réel/simulé de la
+  saisie au lieu de la date d'échéance visée — deux transactions pour
+  la même échéance à des instants réels différents ne s'additionnaient
+  pas. `Cotisations` gagne `echeanceDate` (schemaVersion 8 → 9). Voir
+  DECISIONS.md.
+- **Une amende ne se règle plus jamais automatiquement** (2026-08-09,
+  contredit la décision du 7 août) : enregistrer une cotisation ne
+  solde plus les amendes en attente du membre — seul un geste explicite
+  ("Confirmer telle quelle") règle une amende. Voir DECISIONS.md.
+- Historique des cotisations regroupé par mois (2026-08-09) — évite une
+  liste de dates sans fin sur un cycle de plusieurs mois.
+- Retouches d'écran après test réel (2026-08-09) : bouton "Payer
+  l'amende" (libellé plus clair), clôture de journée précisant "la
+  réunion est terminée", section "Amendes en attente" compactée,
+  étoile rouge dans l'Historique pour repérer une date/mois avec
+  amende non réglée. Voir DECISIONS.md.
 
 ## Décision du fondateur — authentification réelle reportée à la fin
 
@@ -86,6 +142,122 @@ la synchronisation Supabase ne peut pas démarrer (RLS a besoin d'un
 `auth.uid()` réel — voir DECISIONS.md). C'est un choix assumé, pas un
 oubli : les étapes ci-dessous sont donc réordonnées pour avancer sur ce
 qui ne dépend pas d'un compte externe.
+
+## Règles métier restant à coder (document de règles partagé par le fondateur, 2026-08-08)
+
+Un document de règles écrit avec un responsable/agent de terrain a
+précisé plusieurs sujets non encore codés. Le socle (carnets, parts,
+clôture de journée, bug `joinedAt`) est fait — voir "Fait" ci-dessus et
+DECISIONS.md. Ordre convenu avec le fondateur :
+
+1. ~~**Prêts**~~ — **fait le 2026-08-09** : plafond souple 3× l'épargne
+   cotisée (comparé au total emprunté sur le cycle, pas au nouveau prêt
+   seul ; seuil de bascule vers le taux "hors carnet", pas un mur dur),
+   deux taux automatiques (10 % dans le carnet / 15 % hors carnet,
+   bascule totale sur tout le prêt), reclassement automatique
+   (jamais de blocage) dans les 3 derniers mois du cycle. Voir
+   DECISIONS.md, "Résolution automatique du taux de prêt".
+2. ~~**Partage de fin de cycle**~~ — **fait le 2026-08-09** : nouvelle
+   formule = caisse disponible (cotisations + amendes réglées +
+   intérêts perçus − dettes en cours) ÷ total des parts — remplace la
+   formule précédente (intérêts + amendes proratisés, ajoutés à la
+   cotisation de chacun). Un membre endetté au moment du partage ne
+   touche plus aucun bénéfice collectif, quel que soit le montant —
+   plafonné à sa cotisation exacte. Voir DECISIONS.md, "Nouvelle
+   formule de partage : caisse disponible".
+3. ~~**Catalogue d'amendes par groupe**~~ — **fait le 2026-08-09** :
+   motifs configurables (libellé + montant) par groupe, CRUD, avec
+   option "Autre" gardant la saisie libre pour les cas hors catalogue —
+   voir DECISIONS.md, "Catalogue de motifs d'amende". **Les trois
+   points de cette liste sont maintenant terminés.**
+
+Valeurs codées en dur pour le plafond de prêt et sa fenêtre (3×, taux
+10/15 %, fenêtre 3 mois) — rendues configurables par groupe **dans un
+second temps, une fois les règles stabilisées** (décision explicite du
+fondateur, pour ne pas construire un écran de paramétrage avant d'être
+sûr des valeurs).
+
+## Phase 5 — 4 changements validés après premier test réel de l'APK (2026-08-09)
+
+Récap consolidé validé par le fondateur ("vas-y") :
+
+- **A. ~~Écran Cotisations moins chargé~~** — **fait le 2026-08-09** :
+  voir DECISIONS.md, "Écran Cotisations moins chargé".
+- **B. ~~Les amendes ne sont plus une dette~~** — **fait le 2026-08-09** :
+  voir DECISIONS.md, "Les amendes ne sont plus une dette". Une amende
+  (manuelle ou auto-générée) réduit désormais les parts reconnues d'un
+  membre au partage plutôt que de plafonner son montant net comme une
+  dette de prêt.
+- **C. ~~Clôture de cycle conditionnée au paiement de tous les
+  membres~~** — **fait le 2026-08-09** : voir DECISIONS.md, "Clôture de
+  cycle conditionnée au paiement de tous les membres". **Les quatre
+  points de cette série sont maintenant terminés.**
+- **D. ~~Délai de recouvrement des prêts aligné sur les réunions~~** —
+  **fait le 2026-08-09** : voir DECISIONS.md, "Délai de recouvrement des
+  prêts aligné sur les réunions".
+
+## Phase 6 — 6 retours du premier test terrain APK (2026-08-11)
+
+Voir RETOURS_TERRAIN.md, point 20, pour le détail de chaque point et
+CHANGELOG.md pour l'implémentation. Tous **faits le 2026-08-11** :
+
+- **20.1. ~~Nom du groupe obligatoire~~** — déjà le cas, rien à corriger.
+- **20.2. ~~Tous les champs de création de groupe obligatoires~~** —
+  déjà le cas (validateurs existants, 0 reste valide si tapé), rien à
+  corriger.
+- **20.3. ~~Champ oublié pas assez visible~~** — `_scrollToFirstError()`
+  sur `create_group_screen.dart`/`edit_group_screen.dart`.
+- **20.4. ~~"Amende de retard" doublonne "Amende Absence"~~** — champ
+  retiré, catalogue de motifs devient la seule source.
+- **20.5. ~~Date simulée indisponible dans l'APK de test terrain~~** —
+  `AppClock.simulationAutorisee`, build avec
+  `--dart-define=FIELD_TEST_BUILD=true`.
+- **20.6. ~~Écran Cotisations sans fiche consolidée par membre~~** —
+  nouvel écran `SeanceJourScreen` ("Séance du jour"), accessible depuis
+  Cotisations : cotisation + présence + crédit + amende par membre.
+
+## Phase 7 — reprise du test terrain, retours du même jour (2026-08-11)
+
+Voir RETOURS_TERRAIN.md, point 21. Tous **faits le 2026-08-11** :
+
+- **21.1. ~~Séance du jour en lecture seule~~** — plus aucune action
+  possible sur cet écran.
+- **21.2. ~~Refonte de l'écran Cotisation~~** — nouvel écran
+  `CotisationMembreScreen` selon le croquis du fondateur, devient
+  l'unique écran actionnable par membre.
+- **21.3. ~~Totaux amendes/intérêts sur Répartition~~** — affichés.
+- **21.4. ~~Texte du dialogue "Mode de paiement de l'amende" obsolète~~**
+  — corrigé.
+- **21.5. ~~Clôture automatique après 23h~~** — filet de sécurité livré.
+- **21.6. ~~Cotisation exceptionnelle modifiable~~** — motif/montant/date
+  limite modifiables après coup.
+- **21.7. ~~6 mois manquant comme durée de cycle~~** — ajouté.
+
+## Phase 8 — reprise du test terrain, retours plus tard le même jour (2026-08-11)
+
+Voir RETOURS_TERRAIN.md, point 22. Tous **faits le 2026-08-11** :
+
+- **22.1. ~~Numéro de série du carnet saisissable~~** — champ optionnel
+  ajouté à l'ajout d'un membre et à la modification de ses carnets.
+- **22.2. ~~Plus de bouton Présent/Absent~~** — remplacé par "Ajouter
+  amende", qui résout le carnet tout de suite
+  (`resoudreCarnetImmediat`).
+- **22.3. ~~Numéro de carnet affiché à la place du nom~~** — sur
+  l'écran Cotisation.
+- **22.4. ~~Rappels hors carnet~~** — vérifiés, déjà corrects, rien à
+  changer.
+
+## Dette technique — miroir Postgres en retard sur le schéma drift
+
+Constaté le 2026-08-08 en écrivant la migration `0004` :
+`carnets_engages` n'avait jamais été créée côté Postgres (ajoutée en
+drift à schemaVersion 4, jamais miroitée), et plusieurs colonnes de
+schemaVersion 4-5 manquent aussi (`groups.payment_day_of_week`/
+`payment_day_of_month1`/`2`, `cycles.loan_duration_days`,
+`amendes.est_auto_generee`/`confirmed_at`, table `amende_annulations`).
+Sans conséquence tant que la synchronisation Supabase reste inactive
+(bloquée par l'authentification Twilio, voir ci-dessous) — mais **à
+combler avant de brancher la synchronisation réelle**, pas avant.
 
 ## Prochaines étapes, dans l'ordre recommandé
 
@@ -127,9 +299,13 @@ qui ne dépend pas d'un compte externe.
 - Dashboard web pour ONG/institutions (skill `avec-business-rules`
   positionnement) — après demande B2B confirmée, pas avant.
 - Dépôt de marque CotisApp / recherche d'antériorité OAPI.
-- Report de dette d'un cycle à l'autre pour un prêt non soldé à la
-  clôture — l'app avertit seulement, ne modélise aucun mécanisme
-  automatique (voir DECISIONS.md).
+- ~~Report de dette d'un cycle à l'autre pour un prêt non soldé~~ —
+  résolu différemment le 2026-08-07 : plutôt qu'un report automatique au
+  cycle suivant (toujours pas modélisé, et volontairement), le solde de
+  prêt non remboursé est désormais déduit du montant que le membre
+  perçoit au partage ; ce qui n'est pas récupéré devient une perte
+  enregistrée pour l'AVEC (voir DECISIONS.md, "Déduction des dettes au
+  partage").
 - `membresEnRetard` (ancienne détection à période glissante) n'est plus
   utilisé par aucun écran depuis le passage aux amendes automatiques
   (`AmendeAutoService`) — méthode et ses tests dédiés conservés tels
@@ -140,3 +316,8 @@ qui ne dépend pas d'un compte externe.
   pas un bug (voir DECISIONS.md, épisode du 2026-08-06). C'est
   justement pour ce cas que les paramètres du groupe restent
   modifiables tant qu'aucune cotisation n'est encore enregistrée.
+- ~~Deux écrans membre faisaient des choses très proches en
+  parallèle~~ — résolu le 2026-08-13 : `MemberSessionScreen` (l'ancienne
+  "fiche membre consolidée") supprimé, `members_screen.dart` ouvre
+  désormais `CotisationMembreScreen` comme le reste de l'app (voir
+  DECISIONS.md, "Fusion des écrans membre").

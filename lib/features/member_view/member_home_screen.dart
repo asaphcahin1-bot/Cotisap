@@ -41,14 +41,18 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
 
   Future<_MemberViewData> _charger() async {
     final db = ref.read(databaseProvider);
-    final membre =
-        await (db.select(db.members)..where((m) => m.id.equals(widget.memberId))).getSingle();
-    final groupe =
-        await (db.select(db.groups)..where((g) => g.id.equals(widget.groupId))).getSingle();
+    final membre = await (db.select(
+      db.members,
+    )..where((m) => m.id.equals(widget.memberId))).getSingle();
+    final groupe = await (db.select(
+      db.groups,
+    )..where((g) => g.id.equals(widget.groupId))).getSingle();
 
     final cycleIdDemande = widget.cycleId;
     final cycle = cycleIdDemande != null
-        ? await (db.select(db.cycles)..where((c) => c.id.equals(cycleIdDemande))).getSingleOrNull()
+        ? await (db.select(
+            db.cycles,
+          )..where((c) => c.id.equals(cycleIdDemande))).getSingleOrNull()
         : await db.cycleEnCours(widget.groupId);
 
     final tousLesCycles = await db.cyclesDuGroupe(widget.groupId);
@@ -67,7 +71,10 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
       );
     }
 
-    final cotisationsMembre = await db.cotisationsDuMembre(widget.memberId, cycle.id);
+    final cotisationsMembre = await db.cotisationsDuMembre(
+      widget.memberId,
+      cycle.id,
+    );
     final pretsMembre = await db.pretsDuMembre(widget.memberId, cycle.id);
     final pretsConfirmes = <String, bool>{};
     final pretsRembourses = <String, int>{};
@@ -81,21 +88,42 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
     final toutesLesCotisations = await db.cotisationsDuCycle(cycle.id);
     final partsParMembre = <String, int>{};
     for (final c in toutesLesCotisations) {
-      partsParMembre.update(c.memberId, (v) => v + c.partsCount, ifAbsent: () => c.partsCount);
+      partsParMembre.update(
+        c.memberId,
+        (v) => v + c.partsCount,
+        ifAbsent: () => c.partsCount,
+      );
     }
-    final totalInterets = await db.totalInteretsPercusDuCycle(cycle.id);
-    final totalAmendes = await db.totalAmendesDuCycle(cycle.id);
 
     MemberCycleResult? resultatMembre;
     if (partsParMembre.isNotEmpty) {
-      final resultatComplet = const EndOfCycleCalculator().calculer(EndOfCycleInput(
-        partsByMember: partsParMembre.entries
-            .map((e) => MemberParts(memberId: e.key, totalParts: e.value))
-            .toList(),
-        partValueFcfa: cycle.partValueFcfa,
-        totalInterestCollectedFcfa: totalInterets,
-        totalFinesCollectedFcfa: totalAmendes,
-      ));
+      // Même logique que [AppDatabase.cloturerCycleEtOuvrirSuivant] et
+      // l'écran Répartition (voir [AppDatabase.preparerPartageCycle]) :
+      // amendes non soldées déjà déduites de la cotisation de chaque
+      // membre (voir DECISIONS.md, "Les amendes ne sont plus une dette").
+      final prepared = await db.preparerPartageCycle(
+        groupId: widget.groupId,
+        cycleId: cycle.id,
+      );
+      final totalInterets = await db.totalInteretsPercusDuCycle(cycle.id);
+      final totalAmendesRegleesCash = await db.totalAmendesRegleesDuCycle(
+        cycle.id,
+      );
+      final totalAmendesDeduites = prepared.amendesADeduireParMembre.values
+          .fold<int>(0, (a, b) => a + b);
+      final totalDettesEnCours = await db.totalPrincipalNonRembourseDuCycle(
+        cycle.id,
+      );
+      final resultatComplet = const EndOfCycleCalculator().calculer(
+        EndOfCycleInput(
+          membres: prepared.membres,
+          cotisationsTotalesGroupeFcfa:
+              prepared.cotisationsEffectivesTotalesFcfa,
+          amendesRegleesFcfa: totalAmendesRegleesCash + totalAmendesDeduites,
+          interetsPercusFcfa: totalInterets,
+          dettesEnCoursGroupeFcfa: totalDettesEnCours,
+        ),
+      );
       // Ne garder QUE la ligne du membre concerné.
       for (final r in resultatComplet.resultatsParMembre) {
         if (r.memberId == widget.memberId) {
@@ -124,21 +152,30 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
       future: _dataFuture,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         final data = snapshot.data!;
-        final totalParts =
-            data.cotisationsMembre.fold<int>(0, (sum, c) => sum + c.partsCount);
+        final totalParts = data.cotisationsMembre.fold<int>(
+          0,
+          (sum, c) => sum + c.partsCount,
+        );
 
         return Scaffold(
           appBar: AppBar(title: Text(data.membre.fullName)),
           body: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(data.groupe.name, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                data.groupe.name,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               if (data.cycle == null)
-                const Text('Aucun cycle en cours pour ce groupe pour le moment.')
+                const Text(
+                  'Aucun cycle en cours pour ce groupe pour le moment.',
+                )
               else ...[
                 Card(
                   child: Padding(
@@ -152,18 +189,25 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 8),
-                        Text('Mes carnets sur ce cycle : $totalParts'),
+                        Text('Mes parts cotisées sur ce cycle : $totalParts'),
                         if (data.resultatMembre != null) ...[
                           const SizedBox(height: 4),
-                          Text('Ma cotisation totale : ${formatFcfa(data.resultatMembre!.cotisationTotale)}'),
                           Text(
-                            data.cycle!.status == 'en_cours'
-                                ? 'Mon bénéfice estimé si le cycle se terminait aujourd\'hui : '
-                                    '${formatFcfa(data.resultatMembre!.beneficeIndividuel)}'
-                                : 'Mon bénéfice de fin de cycle : ${formatFcfa(data.resultatMembre!.beneficeIndividuel)}',
+                            'Mon épargne totale : ${formatFcfa(data.resultatMembre!.cotisationTotaleFcfa)}',
                           ),
                           Text(
-                            'Montant total : ${formatFcfa(data.resultatMembre!.montantTotalRecu)}',
+                            data.resultatMembre!.aBeneficieDuBonus
+                                ? (data.cycle!.status == 'en_cours'
+                                      ? 'J\'ai droit à une part du bénéfice collectif si le '
+                                            'cycle se terminait aujourd\'hui.'
+                                      : 'J\'ai reçu une part du bénéfice collectif de ce cycle.')
+                                : 'Aucun bénéfice collectif : j\'ai encore une dette envers '
+                                      'le groupe (${formatFcfa(data.resultatMembre!.detteFcfa)}).',
+                          ),
+                          Text(
+                            data.cycle!.status == 'en_cours'
+                                ? 'Montant estimé : ${formatFcfa(data.resultatMembre!.montantNetFcfa)}'
+                                : 'Montant total : ${formatFcfa(data.resultatMembre!.montantNetFcfa)}',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ],
@@ -172,7 +216,10 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('Mes prêts', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Mes prêts',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 if (data.pretsMembre.isEmpty)
                   const Text('Aucun prêt sur ce cycle.')
                 else
@@ -192,21 +239,30 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
               ],
               if (data.autresCycles.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Text('Cycles précédents', style: Theme.of(context).textTheme.titleMedium),
-                ...data.autresCycles.map((c) => ListTile(
-                      title: Text('Cycle n°${c.cycleNumber}'),
-                      subtitle: Text(c.status == 'en_cours' ? 'En cours' : 'Clos'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.of(context).push(MaterialPageRoute(
+                Text(
+                  'Cycles précédents',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                ...data.autresCycles.map(
+                  (c) => ListTile(
+                    title: Text('Cycle n°${c.cycleNumber}'),
+                    subtitle: Text(
+                      c.status == 'en_cours' ? 'En cours' : 'Clos',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
                           builder: (_) => MemberHomeScreen(
                             memberId: widget.memberId,
                             groupId: widget.groupId,
                             cycleId: c.id,
                           ),
-                        ));
-                      },
-                    )),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
             ],
           ),

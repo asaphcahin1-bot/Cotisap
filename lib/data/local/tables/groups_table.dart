@@ -33,6 +33,23 @@ class Groups extends Table {
   IntColumn get paymentDayOfMonth1 => integer().nullable()();
   IntColumn get paymentDayOfMonth2 => integer().nullable()();
 
+  /// Montant obligatoire du fonds de solidarité, **par carnet**, dû à
+  /// chaque réunion — fixé une fois à la création du groupe, jamais
+  /// modifiable ensuite (voir DECISIONS.md, "Fonds de solidarité
+  /// obligatoire"). 0 = fonds non obligatoire pour ce groupe (les
+  /// contributions restent possibles mais aucun solde dû n'est suivi,
+  /// comportement historique).
+  IntColumn get montantSolidariteObligatoireFcfa =>
+      integer().withDefault(const Constant(0))();
+
+  /// Montant fixe ("amende") à payer, en plus des intérêts accumulés,
+  /// pour sortir un prêt "au rouge" et le reconduire pour une nouvelle
+  /// période normale — voir DECISIONS.md, "Dette de prêt au rouge".
+  /// Fixé une fois à la création du groupe, comme les autres montants
+  /// prédéfinis. 0 par défaut.
+  IntColumn get montantAmendeSortieRougeFcfa =>
+      integer().withDefault(const Constant(0))();
+
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();
 

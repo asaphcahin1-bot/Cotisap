@@ -1,12 +1,17 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cotisapp/data/local/database.dart';
-import 'package:cotisapp/domain/calculators/echeance_calculator.dart';
 
-/// Reproduit le scénario "Mr AB" décrit par le fondateur : carnet à 500F,
-/// cotisation hebdomadaire le jeudi. Semaine 1 payée normalement, semaine
-/// 2 manquée -> à la semaine 3, le montant dû doit inclure le
-/// rattrapage de la semaine manquée en plus du paiement normal.
+/// Reprend le scénario "Mr AB" décrit par le fondateur, mis à jour après
+/// le retrait du rattrapage (2026-08-09, voir DECISIONS.md "Amende
+/// seule, jamais de rattrapage") puis du règlement automatique des
+/// amendes (voir "Une amende ne se règle plus jamais automatiquement") :
+/// carnet à 500F, cotisation hebdomadaire le jeudi. Semaine 1 payée
+/// normalement, semaine 2 manquée -> semaine 2 reste définitivement non
+/// payée (seule l'amende s'applique), semaine 3 se paie normalement (1
+/// part, jamais de rattrapage de la semaine 2, et l'amende de la
+/// semaine 2 reste en attente tant que l'agent ne la confirme pas
+/// explicitement).
 void main() {
   late AppDatabase db;
 
@@ -18,17 +23,21 @@ void main() {
     await db.close();
   });
 
-  test('scénario Mr AB : une semaine manquée cumule sur la semaine suivante', () async {
+  test('scénario Mr AB : une semaine manquée n\'est jamais rattrapée, seule l\'amende s\'applique',
+      () async {
     // 4 janvier 2024 est un jeudi.
     final debutCycle = DateTime(2024, 1, 4);
+    final semaine2 = DateTime(2024, 1, 11);
+    final semaine3 = DateTime(2024, 1, 18);
     final groupId = await db.creerGroupe(
       name: 'Groupe test',
       cycleDurationMonths: 9,
       meetingFrequency: 'hebdomadaire',
       paymentDayOfWeek: DateTime.thursday,
+      montantAmendeAbsenceFcfa: 100,
     );
-    final membreId =
-        await db.ajouterMembre(groupId: groupId, fullName: 'Mr AB', phoneNumber: '+2250000001');
+    final membreId = await db.ajouterMembre(
+        groupId: groupId, fullName: 'Mr AB', phoneNumber: '+2250000001', joinedAt: debutCycle);
     final cycleId = await db.ouvrirCycle(
       groupId: groupId,
       cycleNumber: 1,
@@ -37,62 +46,66 @@ void main() {
       startedAt: debutCycle,
     );
     await db.definirCarnetsEngages(
-        groupId: groupId, cycleId: cycleId, memberId: membreId, partsCount: 1);
+        groupId: groupId, cycleId: cycleId, memberId: membreId, nombreCarnets: 1);
 
-    // Semaine 1 (jeudi 4 janvier) : paiement normal.
-    await db.enregistrerCotisationCash(
+    // Semaine 1 (jeudi 4 janvier) : paiement normal, 1 part.
+    await db.enregistrerEncaissementMembre(
       groupId: groupId,
       cycleId: cycleId,
       memberId: membreId,
-      partsCount: 1,
+      partsParCarnet: {1: 1},
       recordedByPhone: '+2250000099',
-      recordedAt: DateTime(2024, 1, 4),
+      date: debutCycle,
     );
 
-    // Semaine 2 (11 janvier) : absent, rien payé.
-
-    // Semaine 3 (18 janvier) : on vérifie le montant dû avant paiement.
-    final cycle = await (db.select(db.cycles)..where((c) => c.id.equals(cycleId))).getSingle();
-    final groupe = await (db.select(db.groups)..where((g) => g.id.equals(groupId))).getSingle();
-    final carnets = await db.carnetsEngagesDuMembre(memberId: membreId, cycleId: cycleId);
-    final echeances = const EcheanceCalculator().echeancesPassees(
-      debutCycle: cycle.startedAt,
-      meetingFrequency: groupe.meetingFrequency,
-      paymentDayOfWeek: groupe.paymentDayOfWeek,
-      maintenant: DateTime(2024, 1, 18),
+    // Semaine 2 (11 janvier) : absent, rien payé — clôturée telle quelle.
+    await db.cloturerJourneeCotisation(
+      groupId: groupId,
+      cycleId: cycleId,
+      date: semaine2,
+      agentPhone: '+2250000099',
     );
-    expect(echeances, hasLength(3)); // 4, 11, 18 janvier
+    final amendeEnAttente =
+        await db.montantAmendesNonSoldeesFcfa(memberId: membreId, cycleId: cycleId);
+    expect(amendeEnAttente, 100);
 
-    final dejaPaye = await db.totalCotiseFcfa(memberId: membreId, cycleId: cycleId);
-    expect(dejaPaye, 500); // seule la semaine 1 a été payée
-
-    final du = const EcheanceCalculator().soldeDuFcfa(
-      echeancesPassees: echeances,
-      carnetsEngages: carnets!.partsCount,
-      valeurCarnetFcfa: cycle.partValueFcfa,
-      montantDejaPayeFcfa: dejaPaye,
-    );
-    expect(du, 1000); // 500 (semaine 2 manquée) + 500 (semaine 3)
-
-    // Le membre régularise en une fois.
-    await db.enregistrerCotisationCash(
+    // Semaine 3 (18 janvier) : paiement normal, 1 SEULE part — jamais de
+    // rattrapage de la semaine 2 manquée.
+    final cotisationIds = await db.enregistrerEncaissementMembre(
       groupId: groupId,
       cycleId: cycleId,
       memberId: membreId,
-      partsCount: du ~/ cycle.partValueFcfa, // 2 carnets
+      partsParCarnet: {1: 1},
       recordedByPhone: '+2250000099',
-      recordedAt: DateTime(2024, 1, 18),
+      date: semaine3,
     );
+    final cotisation = await (db.select(db.cotisations)
+          ..where((c) => c.id.equals(cotisationIds.single)))
+        .getSingle();
+    expect(cotisation.partsCount, 1);
 
-    final apresRegularisation = await db.totalCotiseFcfa(memberId: membreId, cycleId: cycleId);
-    expect(apresRegularisation, 1500); // 500 + 1000
+    // Total cotisé sur le cycle : 2 parts (semaines 1 et 3), jamais 3 —
+    // la semaine 2 manquée n'est jamais récupérée.
+    final totalCotise =
+        await db.totalCotiseParCarnetFcfa(memberId: membreId, cycleId: cycleId, carnetNumero: 1);
+    expect(totalCotise, 1000); // 2 x 500F
 
-    final duApres = const EcheanceCalculator().soldeDuFcfa(
-      echeancesPassees: echeances,
-      carnetsEngages: carnets.partsCount,
-      valeurCarnetFcfa: cycle.partValueFcfa,
-      montantDejaPayeFcfa: apresRegularisation,
-    );
-    expect(duApres, 0); // à jour
+    // L'amende de la semaine 2 reste en attente : l'encaissement de la
+    // semaine 3 ne l'a pas réglée automatiquement.
+    final amendeApresCotisation =
+        await db.montantAmendesNonSoldeesFcfa(memberId: membreId, cycleId: cycleId);
+    expect(amendeApresCotisation, 100);
+
+    // Seul un geste explicite de l'agent la solde.
+    final enAttente = await db.amendesNonSoldeesDuMembre(memberId: membreId, cycleId: cycleId);
+    await db.confirmerAmende(enAttente.single.id);
+    final amendeApresConfirmation =
+        await db.montantAmendesNonSoldeesFcfa(memberId: membreId, cycleId: cycleId);
+    expect(amendeApresConfirmation, 0);
+
+    // La semaine 2 reste définitivement `non_paye` dans l'historique.
+    final groupeSemaine2 = (await db.echeancesGroupeesParDate(cycleId))
+        .firstWhere((g) => g.date == semaine2);
+    expect(groupeSemaine2.lignes.single.statut, 'non_paye');
   });
 }

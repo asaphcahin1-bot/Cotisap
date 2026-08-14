@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/local/database.dart';
 import '../../state/providers.dart';
+import '../cotisations/cotisation_membre_screen.dart';
 
 class MembersScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -45,7 +46,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
   Future<void> _showAddMemberDialog(Cycle? cycle) async {
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
-    final carnetsController = TextEditingController(text: '1');
+    final serieController = TextEditingController();
     final formKey = GlobalKey<FormState>();
     bool sansTelephone = false;
 
@@ -92,16 +93,13 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                 if (cycle != null) ...[
                   const SizedBox(height: 8),
                   TextFormField(
-                    controller: carnetsController,
-                    keyboardType: TextInputType.number,
+                    controller: serieController,
                     decoration: const InputDecoration(
-                      labelText: 'Nombre de carnets pour ce cycle (1 à 5)',
-                      helperText: 'Définitif dès le premier paiement de ce membre.',
+                      labelText: 'Numéro du carnet physique (optionnel)',
+                      helperText:
+                          'Laisser vide pour générer un numéro automatiquement '
+                          '— corrigeable plus tard.',
                     ),
-                    validator: (v) {
-                      final n = int.tryParse(v ?? '');
-                      return (n == null || n < 1 || n > 5) ? 'Entre 1 et 5' : null;
-                    },
                   ),
                 ] else ...[
                   const SizedBox(height: 8),
@@ -131,22 +129,64 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       ),
     );
 
-    if (saved == true) {
-      final db = ref.read(databaseProvider);
+    if (saved != true) return;
+    final db = ref.read(databaseProvider);
+    try {
       final memberId = await db.ajouterMembre(
         groupId: widget.groupId,
         fullName: nameController.text.trim(),
         phoneNumber: sansTelephone ? null : phoneController.text.trim(),
       );
       if (cycle != null) {
+        // Un membre = un seul carnet, toujours (voir DECISIONS.md).
         await db.definirCarnetsEngages(
           groupId: widget.groupId,
           cycleId: cycle.id,
           memberId: memberId,
-          partsCount: int.parse(carnetsController.text.trim()),
         );
+        // Numéro de série manuel — voir RETOURS_TERRAIN.md : le carnet
+        // physique du membre a déjà son propre numéro, l'agent doit
+        // pouvoir le saisir tel quel plutôt que garder celui généré
+        // automatiquement.
+        await _appliquerNumerosSerieSaisis(memberId, {
+          1: serieController.text.trim(),
+        });
       }
       _reload();
+    } on StateError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
+  }
+
+  /// Applique les numéros de série saisis manuellement par l'agent —
+  /// ignore silencieusement une entrée vide (le numéro auto-généré par
+  /// `definirCarnetsEngages`/`genererOuRecupererCarnet` reste alors en
+  /// place). Affiche un message si un numéro est déjà pris par un autre
+  /// carnet du groupe, sans bloquer le reste de l'opération.
+  Future<void> _appliquerNumerosSerieSaisis(
+    String memberId,
+    Map<int, String> numerosSaisis,
+  ) async {
+    final db = ref.read(databaseProvider);
+    for (final entry in numerosSaisis.entries) {
+      if (entry.value.isEmpty) continue;
+      try {
+        await db.redefinirNumeroSerieCarnet(
+          memberId: memberId,
+          carnetNumero: entry.key,
+          nouveauNumeroSerie: entry.value,
+        );
+      } on StateError catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.message)));
+        }
+      }
     }
   }
 
@@ -160,23 +200,24 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
       ));
       return;
     }
-    final controller = TextEditingController(text: '${actuel?.partsCount ?? 1}');
-    final formKey = GlobalKey<FormState>();
+    final db = ref.read(databaseProvider);
+    final carnetExistant = await db.carnetDuMembre(
+      memberId: membre.id,
+      carnetNumero: 1,
+    );
+    final serieController = TextEditingController(
+      text: carnetExistant?.numeroSerie ?? '',
+    );
+    if (!mounted) return;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Carnets — ${membre.fullName}'),
-        content: Form(
-          key: formKey,
-          child: TextFormField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Nombre de carnets (1 à 5)'),
-            validator: (v) {
-              final n = int.tryParse(v ?? '');
-              return (n == null || n < 1 || n > 5) ? 'Entre 1 et 5' : null;
-            },
+        title: Text('Carnet — ${membre.fullName}'),
+        content: TextFormField(
+          controller: serieController,
+          decoration: const InputDecoration(
+            labelText: 'Numéro du carnet physique (optionnel)',
           ),
         ),
         actions: [
@@ -185,9 +226,7 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
             child: const Text('Annuler'),
           ),
           FilledButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) Navigator.of(context).pop(true);
-            },
+            onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Enregistrer'),
           ),
         ],
@@ -195,14 +234,51 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
     );
 
     if (confirmed != true) return;
-    final db = ref.read(databaseProvider);
+    // Un membre = un seul carnet, toujours (voir DECISIONS.md).
     await db.definirCarnetsEngages(
       groupId: widget.groupId,
       cycleId: cycle.id,
       memberId: membre.id,
-      partsCount: int.parse(controller.text.trim()),
     );
+    await _appliquerNumerosSerieSaisis(membre.id, {
+      1: serieController.text.trim(),
+    });
     _reload();
+  }
+
+  /// Ouvre l'écran Cotisation sur ce membre — voir DECISIONS.md,
+  /// "Renommage 'Cotisation' → 'Épargne'" : fusionné avec l'ancienne
+  /// fiche membre consolidée (`MemberSessionScreen`, retirée), les deux
+  /// écrans faisant désormais la même chose en parallèle. N'a de sens
+  /// que sur un cycle en cours (cotisations, amendes et prêts sont tous
+  /// rattachés à un cycle) ; sans cycle, un simple message oriente vers
+  /// l'écran Membres pour créer le cycle d'abord.
+  void _openFicheMembre(Cycle? cycle, List<Member> membres, Member membre) {
+    if (cycle == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Aucun cycle en cours — ouvrez un cycle avant de consulter la '
+            'fiche d\'un membre.',
+          ),
+        ),
+      );
+      return;
+    }
+    final index = membres.indexWhere((m) => m.id == membre.id);
+    if (index == -1) return;
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => CotisationMembreScreen(
+              groupId: widget.groupId,
+              cycleId: cycle.id,
+              membres: membres,
+              initialIndex: index,
+            ),
+          ),
+        )
+        .then((_) => _reload());
   }
 
   @override
@@ -231,10 +307,10 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
               );
               if (data.cycle != null) {
                 if (carnets == null) {
-                  sousTitre.write(' · carnets non définis');
+                  sousTitre.write(' · carnet non engagé pour ce cycle');
                 } else {
                   sousTitre.write(
-                    ' · ${carnets.partsCount} carnet(s)'
+                    ' · carnet engagé'
                     '${carnets.lockedAt != null ? ' (verrouillé)' : ''}',
                   );
                 }
@@ -246,13 +322,14 @@ class _MembersScreenState extends ConsumerState<MembersScreen> {
                   sousTitre.toString(),
                   style: phone == null ? const TextStyle(fontStyle: FontStyle.italic) : null,
                 ),
+                onTap: () => _openFicheMembre(data.cycle, data.membres, membre),
                 trailing: data.cycle == null
                     ? null
                     : IconButton(
                         icon: Icon(
                           carnets?.lockedAt != null ? Icons.lock_outline : Icons.edit_outlined,
                         ),
-                        tooltip: 'Carnets pour ce cycle',
+                        tooltip: 'Carnet pour ce cycle',
                         onPressed: () =>
                             _showEditCarnetsDialog(data.cycle!, membre, carnets),
                       ),

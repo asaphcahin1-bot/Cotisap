@@ -4,6 +4,7 @@ import 'hash_chain_columns.dart';
 import 'groups_table.dart';
 import 'members_table.dart';
 import 'cycles_table.dart';
+import 'pret_demandes_table.dart';
 
 /// Un prêt. La ligne de création est immuable : ni le montant, ni
 /// l'emprunteur ne changent jamais après coup. Le statut
@@ -43,6 +44,34 @@ class Prets extends Table with HashChainColumns, ProvenanceColumns {
 
   DateTimeColumn get createdAt =>
       dateTime().withDefault(currentDateAndTime)();
+
+  /// Renseigné quand ce prêt est le successeur d'un autre — soit une
+  /// sortie du rouge dans le même cycle (voir
+  /// [AppDatabase.sortirDuRouge]), soit une reconduction dans le cycle
+  /// suivant (voir DECISIONS.md, "Reconduction d'un prêt non soldé au
+  /// cycle suivant"). Le prêt d'origine n'est jamais modifié ni
+  /// supprimé — juste "remplacé" par celui-ci pour la suite (voir
+  /// [AppDatabase.pretsNonSoldesDuCycle], qui exclut désormais un prêt
+  /// ayant un successeur connu).
+  TextColumn get renouvelePretId => text().nullable().references(Prets, #id)();
+
+  /// Vrai seulement pour un prêt reconduit au cycle suivant (voir
+  /// [renouvelePretId]) : entre directement "au rouge" dès sa création,
+  /// sans première période de grâce (voir DECISIONS.md, "Dette de prêt
+  /// au rouge" — même mécanisme, le passage de cycle est juste un des
+  /// déclencheurs possibles). Faux pour un prêt normal ou une sortie du
+  /// rouge dans le même cycle (qui repart, elle, avec une période
+  /// normale fraîche).
+  BoolColumn get estAuRougeDesLeDepart =>
+      boolean().withDefault(const Constant(false))();
+
+  /// Renseigné quand ce prêt provient du rationnement collectif des
+  /// crédits (voir DECISIONS.md, "Rationnement collectif des crédits")
+  /// — relie le prêt accordé (intégral ou réduit) à la [PretDemandes]
+  /// dont il découle. Null pour un prêt créé directement via "Nouveau
+  /// prêt" (le chemin simple, sans négociation, reste inchangé).
+  TextColumn get demandeId =>
+      text().nullable().references(PretDemandes, #id)();
 
   @override
   Set<Column> get primaryKey => {id};

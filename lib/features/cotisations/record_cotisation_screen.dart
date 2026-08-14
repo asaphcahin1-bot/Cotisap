@@ -1,28 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/app_clock.dart';
 import '../../core/formatting.dart';
-import '../../data/cotisations/amende_auto_service.dart';
 import '../../data/local/database.dart';
-import '../../domain/calculators/echeance_calculator.dart';
 import '../../state/providers.dart';
-
-/// Une ligne du "brouillon" du jour : un membre + le montant qu'il doit
-/// régler, en attente de confirmation groupée (skill member-consent-rules
-/// dans l'esprit : rien n'est écrit définitivement avant validation
-/// explicite — voir _confirmerEtEnregistrer).
-class _LigneBrouillon {
-  final Member membre;
-  final int montantFcfa;
-  final int carnetsCouverts;
-
-  const _LigneBrouillon({
-    required this.membre,
-    required this.montantFcfa,
-    required this.carnetsCouverts,
-  });
-}
+import 'amende_fonds_dialogs.dart';
+import 'cotisation_membre_screen.dart';
+import 'cotisations_history_screen.dart';
+import 'seance_jour_screen.dart';
 
 class RecordCotisationScreen extends ConsumerStatefulWidget {
   final String groupId;
@@ -39,22 +24,12 @@ class RecordCotisationScreen extends ConsumerStatefulWidget {
       _RecordCotisationScreenState();
 }
 
-class _RecordCotisationScreenState extends ConsumerState<RecordCotisationScreen> {
+class _RecordCotisationScreenState
+    extends ConsumerState<RecordCotisationScreen> {
   late Future<List<Member>> _membersFuture;
-  late Future<List<Cotisation>> _cotisationsFuture;
-  late Future<Cycle> _cycleFuture;
-  late Future<Group> _groupFuture;
-  late Future<List<({Amende amende, Member membre})>> _amendesRevueFuture;
-
-  String? _selectedMemberId;
-  bool _calculEnCours = false;
-  String? _erreurCalcul;
-  int? _montantCalcule;
-  int? _carnetsCouvertsCalcules;
-  bool _carnetsNonDefinis = false;
-
-  final List<_LigneBrouillon> _brouillon = [];
-  bool _enregistrementEnCours = false;
+  late Future<DateTime?> _journeeOuverteFuture;
+  late Future<SeancesCotisationData?> _derniereSeanceFuture;
+  late Future<List<MotifsAmendeData>> _motifsActifsFuture;
 
   @override
   void initState() {
@@ -64,220 +39,179 @@ class _RecordCotisationScreenState extends ConsumerState<RecordCotisationScreen>
 
   void _reload() {
     final db = ref.read(databaseProvider);
-    final agentPhone = ref.read(currentPhoneNumberProvider) ?? 'inconnu';
     setState(() {
       _membersFuture = db.membresDuGroupe(widget.groupId);
-      _cotisationsFuture = db.cotisationsDuCycle(widget.cycleId);
-      _cycleFuture =
-          (db.select(db.cycles)..where((c) => c.id.equals(widget.cycleId))).getSingle();
-      _groupFuture =
-          (db.select(db.groups)..where((g) => g.id.equals(widget.groupId))).getSingle();
-      // Détecte et applique les amendes automatiques (échéances closes
-      // non couvertes, jamais l'échéance en cours) avant de charger la
-      // liste à revoir — voir DECISIONS.md.
-      _amendesRevueFuture = AmendeAutoService(db)
-          .detecterEtAppliquer(
-            groupId: widget.groupId,
-            cycleId: widget.cycleId,
-            recordedByPhone: agentPhone,
-          )
-          .then((_) => db.amendesEnAttenteRevue(groupId: widget.groupId, cycleId: widget.cycleId));
-      _brouillon.clear();
-      _selectedMemberId = null;
-      _montantCalcule = null;
-    });
-  }
-
-  Future<void> _onMemberSelected(String? memberId) async {
-    setState(() {
-      _selectedMemberId = memberId;
-      _montantCalcule = null;
-      _carnetsCouvertsCalcules = null;
-      _carnetsNonDefinis = false;
-      _erreurCalcul = null;
-    });
-    if (memberId == null) return;
-
-    setState(() => _calculEnCours = true);
-    final db = ref.read(databaseProvider);
-    try {
-      final cycle = await _cycleFuture;
-      final groupe = await _groupFuture;
-      final carnets =
-          await db.carnetsEngagesDuMembre(memberId: memberId, cycleId: widget.cycleId);
-      if (carnets == null) {
-        setState(() {
-          _carnetsNonDefinis = true;
-          _calculEnCours = false;
-        });
-        return;
-      }
-      final echeances = const EcheanceCalculator().echeancesPassees(
-        debutCycle: cycle.startedAt,
-        meetingFrequency: groupe.meetingFrequency,
-        paymentDayOfWeek: groupe.paymentDayOfWeek,
-        paymentDayOfMonth1: groupe.paymentDayOfMonth1,
-        paymentDayOfMonth2: groupe.paymentDayOfMonth2,
-        maintenant: AppClock.now(),
-      );
-      final dejaPaye = await db.totalCotiseFcfa(memberId: memberId, cycleId: widget.cycleId);
-      final montant = const EcheanceCalculator().soldeDuFcfa(
-        echeancesPassees: echeances,
-        carnetsEngages: carnets.partsCount,
-        valeurCarnetFcfa: cycle.partValueFcfa,
-        montantDejaPayeFcfa: dejaPaye,
-      );
-      if (!mounted) return;
-      setState(() {
-        _montantCalcule = montant;
-        _carnetsCouvertsCalcules = cycle.partValueFcfa == 0 ? 0 : montant ~/ cycle.partValueFcfa;
-        _calculEnCours = false;
-      });
-    } on ArgumentError catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _erreurCalcul = e.message?.toString() ??
-            'Jour de paiement non configuré pour ce groupe.';
-        _calculEnCours = false;
-      });
-    }
-  }
-
-  void _ajouterAuBrouillon(List<Member> membres) {
-    final memberId = _selectedMemberId;
-    final montant = _montantCalcule;
-    final carnets = _carnetsCouvertsCalcules;
-    if (memberId == null || montant == null || carnets == null) return;
-    final membre = membres.firstWhere((m) => m.id == memberId);
-    setState(() {
-      _brouillon.add(_LigneBrouillon(membre: membre, montantFcfa: montant, carnetsCouverts: carnets));
-      _selectedMemberId = null;
-      _montantCalcule = null;
-      _carnetsCouvertsCalcules = null;
-    });
-  }
-
-  Future<void> _confirmerEtEnregistrer() async {
-    if (_brouillon.isEmpty) return;
-    final total = _brouillon.fold<int>(0, (s, l) => s + l.montantFcfa);
-
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmer les encaissements du jour'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ..._brouillon.map((l) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Text(
-                      '${l.membre.fullName} — ${formatFcfa(l.montantFcfa)} '
-                      '(${l.carnetsCouverts} carnet(s))',
-                    ),
-                  )),
-              const Divider(height: 24),
-              Text('Total : ${formatFcfa(total)}',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 12),
-              const Text(
-                'Vérifiez la liste ci-dessus avant de continuer — une fois '
-                'enregistré, cet encaissement sera définitif.',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Revoir'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Enregistrer définitivement'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirme != true) return;
-
-    setState(() => _enregistrementEnCours = true);
-    final db = ref.read(databaseProvider);
-    final agentPhone = ref.read(currentPhoneNumberProvider) ?? 'inconnu';
-    for (final ligne in _brouillon) {
-      await db.enregistrerCotisationCash(
+      // Filet de sécurité 23h (voir RETOURS_TERRAIN.md) : rattrape et
+      // clôture automatiquement toute journée restée bloquée, avant de
+      // renvoyer la vraie journée encore ouverte.
+      _journeeOuverteFuture = db.journeeCotisationEnAttenteEtAutoClotureSiDepassee(
         groupId: widget.groupId,
         cycleId: widget.cycleId,
-        memberId: ligne.membre.id,
-        partsCount: ligne.carnetsCouverts,
-        recordedByPhone: agentPhone,
+        agentPhone: ref.read(currentPhoneNumberProvider) ?? 'inconnu',
       );
-    }
-    setState(() => _enregistrementEnCours = false);
+      _derniereSeanceFuture = db.derniereSeanceCloturee(widget.cycleId);
+      _motifsActifsFuture = db.motifsAmendeActifsDuGroupe(widget.groupId);
+    });
+  }
+
+  /// Ouvre l'écran Cotisation pour ce membre — voir
+  /// `cotisation_membre_screen.dart` : cotisation, présence, et toutes
+  /// les autres actions (amende, cotisation exceptionnelle, fonds de
+  /// solidarité, prêt) au même endroit, avec possibilité d'enchaîner
+  /// sur le membre suivant sans ressortir de l'écran.
+  Future<void> _ouvrirEcranCotisation(List<Member> membres, String memberId) async {
+    final index = membres.indexWhere((m) => m.id == memberId);
+    if (index == -1) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CotisationMembreScreen(
+          groupId: widget.groupId,
+          cycleId: widget.cycleId,
+          membres: membres,
+          initialIndex: index,
+        ),
+      ),
+    );
     _reload();
   }
 
-  Future<void> _confirmerAmende(Amende amende) async {
-    final db = ref.read(databaseProvider);
-    await db.confirmerAmende(amende.id);
-    _reload();
-  }
-
-  /// Le membre avait en réalité payé cette échéance : annule l'amende
-  /// posée par erreur et enregistre sa cotisation manquante, à la vraie
-  /// date du paiement (voir DECISIONS.md).
-  Future<void> _corrigerAmendeErreur(Amende amende, Member membre) async {
-    final db = ref.read(databaseProvider);
-    final carnets = await db.carnetsEngagesDuMembre(
-        memberId: membre.id, cycleId: widget.cycleId);
+  Future<void> _openAddAmendeDialog() async {
+    final membres = await _membersFuture;
+    final motifs = await _motifsActifsFuture;
     if (!mounted) return;
-    final carnetsParDefaut = carnets?.partsCount ?? 1;
-    final carnetsController = TextEditingController(text: '$carnetsParDefaut');
-    DateTime dateReelle = amende.recordedAt;
-    final formKey = GlobalKey<FormState>();
+    final db = ref.read(databaseProvider);
+    final agentPhone = ref.read(currentPhoneNumberProvider) ?? 'inconnu';
+    await showAddAmendeDialog(
+      context: context,
+      db: db,
+      groupId: widget.groupId,
+      cycleId: widget.cycleId,
+      agentPhone: agentPhone,
+      membres: membres,
+      motifsCatalogue: motifs,
+      onSaved: _reload,
+    );
+  }
+
+  Future<void> _openAddFondsDialog() async {
+    final membres = await _membersFuture;
+    if (!mounted) return;
+    final db = ref.read(databaseProvider);
+    final agentPhone = ref.read(currentPhoneNumberProvider) ?? 'inconnu';
+    await showAddFondsDialog(
+      context: context,
+      db: db,
+      groupId: widget.groupId,
+      cycleId: widget.cycleId,
+      agentPhone: agentPhone,
+      membres: membres,
+      onSaved: _reload,
+    );
+  }
+
+  /// Avant de clôturer réellement, l'agent résout chaque carnet sans
+  /// rien d'enregistré (ni cotisation, ni amende) — un motif parmi les
+  /// 3 prédéfinis (Absence / Part impayée / Payé par un tiers), choisi
+  /// **le jour même**, jamais différé à la séance suivante (voir
+  /// DECISIONS.md, "Clôture de journée interactive" — remplace
+  /// entièrement l'ancienne revue différée). Pré-rempli sur "Absence"
+  /// (le cas le plus courant), modifiable ligne par ligne avant de
+  /// valider. La clôture ne s'exécute que si l'agent valide cet écran.
+  Future<void> _cloturerJournee(DateTime date) async {
+    final db = ref.read(databaseProvider);
+    final aTraiter = await db.carnetsATraiterPourDate(
+      groupId: widget.groupId,
+      cycleId: widget.cycleId,
+      date: date,
+    );
+    if (!mounted) return;
+
+    // Pré-rempli avec ce que l'agent a déjà décidé pendant la journée
+    // depuis l'écran "Séance du jour" (voir RETOURS_TERRAIN.md, point 6)
+    // — "Absence" reste le repli par défaut pour tout carnet non encore
+    // anticipé, comme avant.
+    final anticipees = await db.presenceAnticipeeDuJour(
+      cycleId: widget.cycleId,
+      date: date,
+    );
+    if (!mounted) return;
+    final resolutions = <String, String>{
+      for (final r in aTraiter)
+        AppDatabase.clefResolutionCarnet(r.membre.id, r.carnetNumero):
+            anticipees[AppDatabase.clefResolutionCarnet(
+                  r.membre.id,
+                  r.carnetNumero,
+                )] ??
+                AppDatabase.codeSystemeAbsence,
+    };
+    const libellesMotifs = {
+      AppDatabase.codeSystemeAbsence: 'Absence',
+      AppDatabase.codeSystemePartImpayee: 'Part impayée',
+      AppDatabase.codeSystemePayeParTiers: 'Payé par un tiers',
+    };
 
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text('Corriger — ${membre.fullName}'),
-          content: Form(
-            key: formKey,
+          title: Text(
+            'La réunion est terminée — clôturer le '
+            '${date.day}/${date.month}/${date.year} ?',
+          ),
+          content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "L'amende sera annulée et sa cotisation manquante enregistrée "
-                  "à la vraie date du paiement.",
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton(
-                  onPressed: () async {
-                    final choisie = await showDatePicker(
-                      context: context,
-                      initialDate: dateReelle,
-                      firstDate: DateTime(2000),
-                      lastDate: AppClock.now(),
-                    );
-                    if (choisie != null) {
-                      setDialogState(() => dateReelle = choisie);
-                    }
-                  },
-                  child: Text(
-                    'Date réelle du paiement : '
-                    '${dateReelle.day}/${dateReelle.month}/${dateReelle.year}',
+                if (aTraiter.isEmpty)
+                  const Text(
+                    'Tous les membres figurent sur la liste définitive du jour.',
+                  )
+                else ...[
+                  Text(
+                    '${aTraiter.length} carnet(s) sans rien d\'enregistré — '
+                    'précisez pourquoi avant de clôturer :',
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: carnetsController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Nombre de carnets'),
-                  validator: (v) => (int.tryParse(v ?? '') == null) ? 'Invalide' : null,
+                  const SizedBox(height: 8),
+                  ...aTraiter.map((r) {
+                    final cle = AppDatabase.clefResolutionCarnet(
+                      r.membre.id,
+                      r.carnetNumero,
+                    );
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${r.membre.fullName} — carnet ${r.carnetNumero}',
+                            ),
+                          ),
+                          DropdownButton<String>(
+                            value: resolutions[cle],
+                            items: [
+                              for (final code in r.motifsPossibles)
+                                DropdownMenuItem(
+                                  value: code,
+                                  child: Text(libellesMotifs[code] ?? code),
+                                ),
+                            ],
+                            onChanged: (v) => setDialogState(() {
+                              resolutions[cle] =
+                                  v ?? AppDatabase.codeSystemeAbsence;
+                            }),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+                const SizedBox(height: 16),
+                const Text(
+                  'Cette date ne pourra plus recevoir de nouvel encaissement une fois '
+                  'clôturée.',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -285,38 +219,115 @@ class _RecordCotisationScreenState extends ConsumerState<RecordCotisationScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Annuler'),
+              child: const Text('Revoir'),
             ),
             FilledButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) Navigator.of(context).pop(true);
-              },
-              child: const Text('Corriger'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Clôturer définitivement'),
             ),
           ],
         ),
       ),
     );
-
     if (confirme != true) return;
     final agentPhone = ref.read(currentPhoneNumberProvider) ?? 'inconnu';
-    await db.corrigerAmendeErreur(
-      amendeId: amende.id,
-      raison: 'Le membre avait en fait payé — cotisation non enregistrée à temps',
-      annuleParPhone: agentPhone,
+    await db.cloturerJourneeCotisation(
       groupId: widget.groupId,
       cycleId: widget.cycleId,
-      memberId: membre.id,
-      partsCount: int.parse(carnetsController.text.trim()),
-      dateReelle: dateReelle,
+      date: date,
+      agentPhone: agentPhone,
+      resolutions: resolutions,
     );
     _reload();
+  }
+
+  Future<void> _annulerClotureJournee(SeancesCotisationData seance) async {
+    final db = ref.read(databaseProvider);
+    final agentPhone = ref.read(currentPhoneNumberProvider) ?? 'inconnu';
+    try {
+      await db.annulerClotureJournee(
+        seanceId: seance.id,
+        annuleParPhone: agentPhone,
+      );
+      _reload();
+    } on StateError catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
+    }
+  }
+
+  Widget _ligneEcheance(Echeance ligne, Map<String, Member> membresParId) {
+    final nom = membresParId[ligne.memberId]?.fullName ?? ligne.memberId;
+    final paye = ligne.statut == 'paye';
+    final heure =
+        '${ligne.recordedAt.hour.toString().padLeft(2, '0')}h${ligne.recordedAt.minute.toString().padLeft(2, '0')}';
+    return ListTile(
+      dense: true,
+      leading: Icon(
+        paye ? Icons.check_circle : Icons.cancel_outlined,
+        color: paye ? Colors.green : Theme.of(context).colorScheme.error,
+      ),
+      title: Text('$nom — carnet ${ligne.carnetNumero}'),
+      subtitle: Text(
+        paye
+            ? '${ligne.partsPayees} part(s) — ${formatFcfa(ligne.montantPayeFcfa)}'
+                  ' · $heure · ${ligne.recordedByPhone}'
+            : 'Non payé / Absent'
+                  '${ligne.amendeFcfa > 0 ? ' — amende ${formatFcfa(ligne.amendeFcfa)}' : ''}',
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Cotisations (cash)')),
+      appBar: AppBar(
+        title: const Text('Épargnes (cash)'),
+        actions: [
+          // Accessibles directement pendant la saisie des encaissements —
+          // pas seulement depuis l'écran Répartition (voir DECISIONS.md,
+          // "Écran Cotisations moins chargé") — en actions compactes pour
+          // ne pas alourdir cet écran.
+          IconButton(
+            icon: const Icon(Icons.groups_outlined),
+            tooltip: 'Séance du jour — vue d\'ensemble (lecture seule)',
+            onPressed: () => Navigator.of(context)
+                .push(
+                  MaterialPageRoute(
+                    builder: (_) => SeanceJourScreen(
+                      groupId: widget.groupId,
+                      cycleId: widget.cycleId,
+                    ),
+                  ),
+                )
+                .then((_) => _reload()),
+          ),
+          IconButton(
+            icon: const Icon(Icons.report_gmailerrorred_outlined),
+            tooltip: 'Ajouter une amende',
+            onPressed: _openAddAmendeDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.volunteer_activism_outlined),
+            tooltip: 'Contribution fonds',
+            onPressed: _openAddFondsDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Historique par date',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => CotisationsHistoryScreen(
+                  groupId: widget.groupId,
+                  cycleId: widget.cycleId,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: FutureBuilder<List<Member>>(
         future: _membersFuture,
         builder: (context, memberSnapshot) {
@@ -324,189 +335,188 @@ class _RecordCotisationScreenState extends ConsumerState<RecordCotisationScreen>
             return const Center(child: CircularProgressIndicator());
           }
           final membres = memberSnapshot.data!;
-          final membresDisponibles =
-              membres.where((m) => !_brouillon.any((l) => l.membre.id == m.id)).toList();
+          final membresParId = {for (final m in membres) m.id: m};
 
           return ListView(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('1. Ajouter un encaissement', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<String>(
-                      initialValue: _selectedMemberId,
-                      decoration: const InputDecoration(
-                        labelText: 'Membre',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: membresDisponibles
-                          .map((m) => DropdownMenuItem(value: m.id, child: Text(m.fullName)))
-                          .toList(),
-                      onChanged: _onMemberSelected,
-                    ),
-                    const SizedBox(height: 12),
-                    if (_calculEnCours) const Center(child: CircularProgressIndicator()),
-                    if (_erreurCalcul != null)
-                      Text(_erreurCalcul!,
-                          style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                    if (_carnetsNonDefinis)
-                      const Text(
-                        'Carnets non définis pour ce membre sur ce cycle — allez sur '
-                        '"Membres" pour les choisir avant de pouvoir enregistrer un paiement.',
-                        style: TextStyle(fontStyle: FontStyle.italic),
-                      ),
-                    if (_montantCalcule != null) ...[
-                      if (_montantCalcule == 0)
-                        const Text('Ce membre est à jour — rien à régler pour le moment.')
-                      else ...[
-                        Text(
-                          'Montant à régler : ${formatFcfa(_montantCalcule!)} '
-                          '($_carnetsCouvertsCalcules carnet(s))',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        FilledButton(
-                          onPressed: () => _ajouterAuBrouillon(membres),
-                          child: const Text('Ajouter à la liste du jour'),
-                        ),
-                      ],
-                    ],
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              if (_brouillon.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('2. Encaissements du jour (${_brouillon.length})',
-                          style: Theme.of(context).textTheme.titleMedium),
-                      const SizedBox(height: 8),
-                      ..._brouillon.map((l) => ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: const Icon(Icons.pending_outlined),
-                            title: Text(l.membre.fullName),
-                            subtitle: Text('${l.carnetsCouverts} carnet(s)'),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(formatFcfa(l.montantFcfa)),
-                                IconButton(
-                                  icon: const Icon(Icons.close),
-                                  tooltip: 'Retirer',
-                                  onPressed: () => setState(() => _brouillon.remove(l)),
-                                ),
-                              ],
-                            ),
-                          )),
-                      const SizedBox(height: 8),
-                      FilledButton.icon(
-                        onPressed: _enregistrementEnCours ? null : _confirmerEtEnregistrer,
-                        icon: _enregistrementEnCours
-                            ? const SizedBox(
-                                width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.check),
-                        label: const Text('Vérifier et enregistrer'),
-                      ),
-                    ],
-                  ),
-                ),
-              const Divider(height: 1),
-              FutureBuilder<List<({Amende amende, Member membre})>>(
-                future: _amendesRevueFuture,
+              // Clôture de journée en attente — jamais automatique/silencieuse,
+              // toujours un rappel visible tant que l'agent n'a pas tranché
+              // (voir DECISIONS.md, "Clôture de la journée de cotisation").
+              FutureBuilder<DateTime?>(
+                future: _journeeOuverteFuture,
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
-                  final enAttente = snapshot.data!;
+                  final date = snapshot.data;
+                  if (date == null) return const SizedBox.shrink();
                   return Container(
                     width: double.infinity,
-                    color: Theme.of(context).colorScheme.errorContainer,
+                    color: Theme.of(context).colorScheme.tertiaryContainer,
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Amendes de retard à revoir (${enAttente.length})',
+                          'Journée du ${date.day}/${date.month}/${date.year} en cours',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Appliquées automatiquement pour une échéance passée non '
-                          'couverte — à confirmer, ou à corriger si le membre avait '
-                          'en fait payé.',
-                          style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
+                          'Tant que cette journée n\'est pas clôturée, les membres '
+                          'peuvent encore compléter leur paiement. Les membres '
+                          'absents ne sont marqués en retard qu\'à la clôture.',
+                          style: TextStyle(
+                            fontStyle: FontStyle.italic,
+                            fontSize: 12,
+                          ),
                         ),
                         const SizedBox(height: 8),
-                        ...enAttente.map((r) => Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${r.membre.fullName} — ${formatFcfa(r.amende.montantFcfa)}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                        OutlinedButton.icon(
+                          onPressed: () => Navigator.of(context)
+                              .push(
+                                MaterialPageRoute(
+                                  builder: (_) => SeanceJourScreen(
+                                    groupId: widget.groupId,
+                                    cycleId: widget.cycleId,
                                   ),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () => _confirmerAmende(r.amende),
-                                          child: const Text('Confirmer'),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: OutlinedButton(
-                                          onPressed: () =>
-                                              _corrigerAmendeErreur(r.amende, r.membre),
-                                          child: const Text('Erreur — il avait payé'),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            )),
+                                ),
+                              )
+                              .then((_) => _reload()),
+                          icon: const Icon(Icons.groups_outlined),
+                          label: const Text(
+                            'Séance du jour — vue d\'ensemble (lecture seule)',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        FilledButton(
+                          onPressed: () => _cloturerJournee(date),
+                          child: const Text('Clôturer cette journée'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              FutureBuilder<SeancesCotisationData?>(
+                future: _derniereSeanceFuture,
+                builder: (context, snapshot) {
+                  final seance = snapshot.data;
+                  if (seance == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () => _annulerClotureJournee(seance),
+                        child: Text(
+                          'Annuler la clôture du '
+                          '${seance.date.day}/${seance.date.month}/${seance.date.year} '
+                          '(uniquement si rien n\'a été enregistré depuis)',
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const Divider(height: 1),
+              // Choix du membre — visible uniquement s'il y a une journée de
+              // cotisation ouverte. Ouvre l'écran Cotisation (voir
+              // `cotisation_membre_screen.dart`) : cotisation, présence, et
+              // toutes les autres actions au même endroit, avec possibilité
+              // d'enchaîner sur le membre suivant.
+              FutureBuilder<DateTime?>(
+                future: _journeeOuverteFuture,
+                builder: (context, journeeSnapshot) {
+                  if (!journeeSnapshot.hasData ||
+                      journeeSnapshot.data == null) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text(
+                        'Aucune journée d\'épargne ouverte pour le moment — la '
+                        'prochaine épargne ne sera possible qu\'à la date de la '
+                        'prochaine échéance programmée.',
+                        style: TextStyle(fontStyle: FontStyle.italic),
+                      ),
+                    );
+                  }
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          '1. Épargne',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<String>(
+                          initialValue: null,
+                          decoration: const InputDecoration(
+                            labelText: 'Membre',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: membres
+                              .map(
+                                (m) => DropdownMenuItem(
+                                  value: m.id,
+                                  child: Text(m.fullName),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (memberId) {
+                            if (memberId != null) {
+                              _ouvrirEcranCotisation(membres, memberId);
+                            }
+                          },
+                        ),
                       ],
                     ),
                   );
                 },
               ),
               const Divider(height: 1),
-              FutureBuilder<List<Cotisation>>(
-                future: _cotisationsFuture,
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final cotisations = snapshot.data!;
-                  if (cotisations.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Center(
-                        child: Text('Aucune cotisation enregistrée sur ce cycle.'),
-                      ),
-                    );
-                  }
-                  final membresParId = {for (final m in membres) m.id: m};
-                  return Column(
-                    children: cotisations.map((c) {
-                      final nom = membresParId[c.memberId]?.fullName ?? c.memberId;
-                      final provenanceTag = c.provenance == 'importe'
-                          ? ' · importé${c.estApproximatif ? ' (approximatif)' : ''}'
-                          : '';
-                      return ListTile(
-                        leading: const Icon(Icons.check_circle_outline),
-                        title: Text('$nom — ${c.partsCount} carnet(s)'),
-                        subtitle: Text('Source : ${c.source}$provenanceTag'),
+              // Encaissements déjà enregistrés aujourd'hui — reste visible en
+              // permanence pendant la journée en cours, ne se vide jamais
+              // après une confirmation (voir DECISIONS.md, "Encaissements de
+              // la journée visibles en direct").
+              FutureBuilder<DateTime?>(
+                future: _journeeOuverteFuture,
+                builder: (context, journeeSnapshot) {
+                  final date = journeeSnapshot.data;
+                  if (date == null) return const SizedBox.shrink();
+                  return FutureBuilder<List<Echeance>>(
+                    future: ref
+                        .read(databaseProvider)
+                        .echeancesResoluesPourDate(
+                          cycleId: widget.cycleId,
+                          date: date,
+                        ),
+                    builder: (context, echSnapshot) {
+                      final lignes = echSnapshot.data ?? [];
+                      if (lignes.isEmpty) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              child: Text(
+                                'Encaissements déjà enregistrés — '
+                                '${date.day}/${date.month}/${date.year} (${lignes.length})',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                            ...lignes.map(
+                              (l) => _ligneEcheance(l, membresParId),
+                            ),
+                          ],
+                        ),
                       );
-                    }).toList(),
+                    },
                   );
                 },
               ),

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,11 +30,12 @@ class _GroupsListScreenState extends ConsumerState<GroupsListScreen> {
     });
   }
 
-  /// Mode test uniquement (jamais en version publiée, voir
-  /// `AppClock.definir` qui ignore silencieusement hors debug) : permet
-  /// de simuler une date pour dérouler plusieurs semaines/mois d'usage
-  /// sans attendre ni toucher à l'horloge réelle du téléphone — voir
-  /// DECISIONS.md.
+  /// Mode test uniquement (jamais en version publiée normale, voir
+  /// `AppClock.simulationAutorisee` — vrai en debug, ou dans un build de
+  /// test terrain compilé avec `--dart-define=FIELD_TEST_BUILD=true`) :
+  /// permet de simuler une date pour dérouler plusieurs semaines/mois
+  /// d'usage sans attendre ni toucher à l'horloge réelle du téléphone —
+  /// voir DECISIONS.md.
   Future<void> _gererDateSimulee() async {
     final choix = await showDialog<String>(
       context: context,
@@ -90,7 +90,7 @@ class _GroupsListScreenState extends ConsumerState<GroupsListScreen> {
       appBar: AppBar(
         title: const Text('Mes groupes AVEC'),
         actions: [
-          if (kDebugMode)
+          if (AppClock.simulationAutorisee)
             IconButton(
               icon: Text(
                 '🧪',

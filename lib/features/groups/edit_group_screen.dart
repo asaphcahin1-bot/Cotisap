@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/formatting.dart';
 import '../../data/local/database.dart';
 import '../../state/providers.dart';
 
@@ -37,7 +38,6 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
   late final TextEditingController _nameController;
   late final TextEditingController _partValueController;
   late final TextEditingController _interestController;
-  late final TextEditingController _lateFeeController;
   late final TextEditingController _loanDurationController;
   late final TextEditingController _dayOfMonth1Controller;
   late final TextEditingController _dayOfMonth2Controller;
@@ -45,6 +45,16 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
   late String _meetingFrequency;
   int? _paymentDayOfWeek;
   bool _saving = false;
+
+  // Voir create_group_screen.dart — même mécanisme de scroll-to-error
+  // (RETOURS_TERRAIN.md, point 3).
+  final _nameKey = GlobalKey();
+  final _paymentDayOfWeekKey = GlobalKey();
+  final _dayOfMonth1Key = GlobalKey();
+  final _dayOfMonth2Key = GlobalKey();
+  final _partValueKey = GlobalKey();
+  final _interestKey = GlobalKey();
+  final _loanDurationKey = GlobalKey();
 
   @override
   void initState() {
@@ -54,7 +64,6 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
     _nameController = TextEditingController(text: g.name);
     _partValueController = TextEditingController(text: '${c.partValueFcfa}');
     _interestController = TextEditingController(text: '${c.interestRatePercent}');
-    _lateFeeController = TextEditingController(text: '${c.lateFeeFcfa}');
     _loanDurationController = TextEditingController(text: '${c.loanDurationDays}');
     _dayOfMonth1Controller =
         TextEditingController(text: g.paymentDayOfMonth1?.toString() ?? '');
@@ -70,15 +79,49 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
     _nameController.dispose();
     _partValueController.dispose();
     _interestController.dispose();
-    _lateFeeController.dispose();
     _loanDurationController.dispose();
     _dayOfMonth1Controller.dispose();
     _dayOfMonth2Controller.dispose();
     super.dispose();
   }
 
+  void _scrollToFirstError() {
+    for (final key in [
+      _nameKey,
+      _paymentDayOfWeekKey,
+      _dayOfMonth1Key,
+      _dayOfMonth2Key,
+      _partValueKey,
+      _interestKey,
+      _loanDurationKey,
+    ]) {
+      final ctx = key.currentContext;
+      if (ctx == null) continue;
+      final field = ctx.findAncestorStateOfType<FormFieldState>();
+      if (field != null && !field.isValid) {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 300),
+          alignment: 0.2,
+        );
+        return;
+      }
+    }
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      _scrollToFirstError();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Des champs sont invalides ou incomplets — corrigez les champs '
+            'surlignés en rouge.',
+          ),
+        ),
+      );
+      return;
+    }
     setState(() => _saving = true);
     final db = ref.read(databaseProvider);
     try {
@@ -97,7 +140,6 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
             : null,
         partValueFcfa: int.parse(_partValueController.text.trim()),
         interestRatePercent: double.parse(_interestController.text.trim()),
-        lateFeeFcfa: int.parse(_lateFeeController.text.trim()),
         loanDurationDays: int.parse(_loanDurationController.text.trim()),
       );
       if (!mounted) return;
@@ -119,12 +161,13 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             const Text(
-              "Modifiable uniquement tant qu'aucune cotisation n'a été "
+              "Modifiable uniquement tant qu'aucune épargne n'a été "
               "enregistrée sur ce cycle.",
               style: TextStyle(fontStyle: FontStyle.italic),
             ),
             const SizedBox(height: 16),
             TextFormField(
+              key: _nameKey,
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Nom du groupe',
@@ -140,7 +183,7 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
                 labelText: 'Durée du cycle',
                 border: OutlineInputBorder(),
               ),
-              items: [9, 10, 11, 12]
+              items: [6, 9, 10, 11, 12]
                   .map((m) => DropdownMenuItem(value: m, child: Text('$m mois')))
                   .toList(),
               onChanged: (v) => setState(() => _cycleDurationMonths = v ?? 9),
@@ -153,13 +196,14 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
                 border: OutlineInputBorder(),
               ),
               items: _frequences
-                  .map((f) => DropdownMenuItem(value: f, child: Text(f)))
+                  .map((f) => DropdownMenuItem(value: f, child: Text(formatMeetingFrequency(f))))
                   .toList(),
               onChanged: (v) => setState(() => _meetingFrequency = v ?? 'mensuelle'),
             ),
             const SizedBox(height: 16),
             if (_meetingFrequency == 'hebdomadaire')
               DropdownButtonFormField<int>(
+                key: _paymentDayOfWeekKey,
                 initialValue: _paymentDayOfWeek,
                 decoration: const InputDecoration(
                   labelText: 'Jour de paiement',
@@ -173,10 +217,11 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
               ),
             if (_meetingFrequency == 'mensuelle')
               TextFormField(
+                key: _dayOfMonth1Key,
                 controller: _dayOfMonth1Controller,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Jour du mois pour la cotisation (1 à 31)',
+                  labelText: 'Jour du mois pour l\'épargne (1 à 31)',
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) {
@@ -186,10 +231,11 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
               ),
             if (_meetingFrequency == 'bimensuelle') ...[
               TextFormField(
+                key: _dayOfMonth1Key,
                 controller: _dayOfMonth1Controller,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: '1er jour du mois pour la cotisation (1 à 31)',
+                  labelText: '1er jour du mois pour l\'épargne (1 à 31)',
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) {
@@ -199,10 +245,11 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
+                key: _dayOfMonth2Key,
                 controller: _dayOfMonth2Controller,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: '2e jour du mois pour la cotisation (1 à 31)',
+                  labelText: '2e jour du mois pour l\'épargne (1 à 31)',
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) {
@@ -213,6 +260,7 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
             ],
             const SizedBox(height: 16),
             TextFormField(
+              key: _partValueKey,
               controller: _partValueController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
@@ -224,6 +272,7 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              key: _interestKey,
               controller: _interestController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
@@ -235,6 +284,7 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              key: _loanDurationKey,
               controller: _loanDurationController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
@@ -245,18 +295,6 @@ class _EditGroupScreenState extends ConsumerState<EditGroupScreen> {
                 final jours = int.tryParse(v ?? '');
                 return (jours == null || jours < 1) ? 'Durée invalide' : null;
               },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _lateFeeController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Amende de retard de cotisation (FCFA)',
-                helperText: '0 si le groupe ne prévoit pas d\'amende automatique',
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) =>
-                  (int.tryParse(v ?? '') == null) ? 'Montant invalide' : null,
             ),
             const SizedBox(height: 24),
             FilledButton(
