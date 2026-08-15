@@ -10654,6 +10654,21 @@ class $FondsSolidariteContributionsTable extends FondsSolidariteContributions
           'REFERENCES cotisations_exceptionnelles (id)',
         ),
       );
+  static const VerificationMeta _estDeductionAutomatiqueMeta =
+      const VerificationMeta('estDeductionAutomatique');
+  @override
+  late final GeneratedColumn<bool> estDeductionAutomatique =
+      GeneratedColumn<bool>(
+        'est_deduction_automatique',
+        aliasedName,
+        false,
+        type: DriftSqlType.bool,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("est_deduction_automatique" IN (0, 1))',
+        ),
+        defaultValue: const Constant(false),
+      );
   @override
   List<GeneratedColumn> get $columns => [
     previousHash,
@@ -10669,6 +10684,7 @@ class $FondsSolidariteContributionsTable extends FondsSolidariteContributions
     recordedByPhone,
     recordedAt,
     cotisationExceptionnelleId,
+    estDeductionAutomatique,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -10786,6 +10802,15 @@ class $FondsSolidariteContributionsTable extends FondsSolidariteContributions
         ),
       );
     }
+    if (data.containsKey('est_deduction_automatique')) {
+      context.handle(
+        _estDeductionAutomatiqueMeta,
+        estDeductionAutomatique.isAcceptableOrUnknown(
+          data['est_deduction_automatique']!,
+          _estDeductionAutomatiqueMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -10850,6 +10875,10 @@ class $FondsSolidariteContributionsTable extends FondsSolidariteContributions
         DriftSqlType.string,
         data['${effectivePrefix}cotisation_exceptionnelle_id'],
       ),
+      estDeductionAutomatique: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}est_deduction_automatique'],
+      )!,
     );
   }
 
@@ -10890,6 +10919,19 @@ class FondsSolidariteContribution extends DataClass
   /// exceptionnelles". `null` pour une contribution "ordinaire" (fonds
   /// obligatoire récurrent, ou libre).
   final String? cotisationExceptionnelleId;
+
+  /// `true` uniquement pour une ligne écrite automatiquement — jamais
+  /// un vrai versement cash — voir
+  /// [AppDatabase.appliquerDeductionsCotisationsExceptionnellesEchues]
+  /// (RETOURS_TERRAIN.md, point 25.4). Compte pour "solde réglé" (le
+  /// membre ne doit plus rien), mais **jamais** pour le "Collecté"
+  /// affiché sur `cotisations_exceptionnelles_screen.dart` (aucun
+  /// argent réel n'a changé de mains) ni pour la réduction des parts
+  /// reconnues au partage (voir [AppDatabase.preparerPartageCycle], qui
+  /// se base uniquement sur les versements cash pour ne jamais compter
+  /// une même réduction deux fois, que la déduction ait eu lieu
+  /// immédiatement ou seulement à la clôture).
+  final bool estDeductionAutomatique;
   const FondsSolidariteContribution({
     this.previousHash,
     required this.hash,
@@ -10904,6 +10946,7 @@ class FondsSolidariteContribution extends DataClass
     required this.recordedByPhone,
     required this.recordedAt,
     this.cotisationExceptionnelleId,
+    required this.estDeductionAutomatique,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -10929,6 +10972,7 @@ class FondsSolidariteContribution extends DataClass
         cotisationExceptionnelleId,
       );
     }
+    map['est_deduction_automatique'] = Variable<bool>(estDeductionAutomatique);
     return map;
   }
 
@@ -10954,6 +10998,7 @@ class FondsSolidariteContribution extends DataClass
           cotisationExceptionnelleId == null && nullToAbsent
           ? const Value.absent()
           : Value(cotisationExceptionnelleId),
+      estDeductionAutomatique: Value(estDeductionAutomatique),
     );
   }
 
@@ -10978,6 +11023,9 @@ class FondsSolidariteContribution extends DataClass
       cotisationExceptionnelleId: serializer.fromJson<String?>(
         json['cotisationExceptionnelleId'],
       ),
+      estDeductionAutomatique: serializer.fromJson<bool>(
+        json['estDeductionAutomatique'],
+      ),
     );
   }
   @override
@@ -10999,6 +11047,9 @@ class FondsSolidariteContribution extends DataClass
       'cotisationExceptionnelleId': serializer.toJson<String?>(
         cotisationExceptionnelleId,
       ),
+      'estDeductionAutomatique': serializer.toJson<bool>(
+        estDeductionAutomatique,
+      ),
     };
   }
 
@@ -11016,6 +11067,7 @@ class FondsSolidariteContribution extends DataClass
     String? recordedByPhone,
     DateTime? recordedAt,
     Value<String?> cotisationExceptionnelleId = const Value.absent(),
+    bool? estDeductionAutomatique,
   }) => FondsSolidariteContribution(
     previousHash: previousHash.present ? previousHash.value : this.previousHash,
     hash: hash ?? this.hash,
@@ -11032,6 +11084,8 @@ class FondsSolidariteContribution extends DataClass
     cotisationExceptionnelleId: cotisationExceptionnelleId.present
         ? cotisationExceptionnelleId.value
         : this.cotisationExceptionnelleId,
+    estDeductionAutomatique:
+        estDeductionAutomatique ?? this.estDeductionAutomatique,
   );
   FondsSolidariteContribution copyWithCompanion(
     FondsSolidariteContributionsCompanion data,
@@ -11064,6 +11118,9 @@ class FondsSolidariteContribution extends DataClass
       cotisationExceptionnelleId: data.cotisationExceptionnelleId.present
           ? data.cotisationExceptionnelleId.value
           : this.cotisationExceptionnelleId,
+      estDeductionAutomatique: data.estDeductionAutomatique.present
+          ? data.estDeductionAutomatique.value
+          : this.estDeductionAutomatique,
     );
   }
 
@@ -11082,7 +11139,8 @@ class FondsSolidariteContribution extends DataClass
           ..write('motif: $motif, ')
           ..write('recordedByPhone: $recordedByPhone, ')
           ..write('recordedAt: $recordedAt, ')
-          ..write('cotisationExceptionnelleId: $cotisationExceptionnelleId')
+          ..write('cotisationExceptionnelleId: $cotisationExceptionnelleId, ')
+          ..write('estDeductionAutomatique: $estDeductionAutomatique')
           ..write(')'))
         .toString();
   }
@@ -11102,6 +11160,7 @@ class FondsSolidariteContribution extends DataClass
     recordedByPhone,
     recordedAt,
     cotisationExceptionnelleId,
+    estDeductionAutomatique,
   );
   @override
   bool operator ==(Object other) =>
@@ -11119,7 +11178,8 @@ class FondsSolidariteContribution extends DataClass
           other.motif == this.motif &&
           other.recordedByPhone == this.recordedByPhone &&
           other.recordedAt == this.recordedAt &&
-          other.cotisationExceptionnelleId == this.cotisationExceptionnelleId);
+          other.cotisationExceptionnelleId == this.cotisationExceptionnelleId &&
+          other.estDeductionAutomatique == this.estDeductionAutomatique);
 }
 
 class FondsSolidariteContributionsCompanion
@@ -11137,6 +11197,7 @@ class FondsSolidariteContributionsCompanion
   final Value<String> recordedByPhone;
   final Value<DateTime> recordedAt;
   final Value<String?> cotisationExceptionnelleId;
+  final Value<bool> estDeductionAutomatique;
   final Value<int> rowid;
   const FondsSolidariteContributionsCompanion({
     this.previousHash = const Value.absent(),
@@ -11152,6 +11213,7 @@ class FondsSolidariteContributionsCompanion
     this.recordedByPhone = const Value.absent(),
     this.recordedAt = const Value.absent(),
     this.cotisationExceptionnelleId = const Value.absent(),
+    this.estDeductionAutomatique = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   FondsSolidariteContributionsCompanion.insert({
@@ -11168,6 +11230,7 @@ class FondsSolidariteContributionsCompanion
     required String recordedByPhone,
     this.recordedAt = const Value.absent(),
     this.cotisationExceptionnelleId = const Value.absent(),
+    this.estDeductionAutomatique = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : hash = Value(hash),
        id = Value(id),
@@ -11190,6 +11253,7 @@ class FondsSolidariteContributionsCompanion
     Expression<String>? recordedByPhone,
     Expression<DateTime>? recordedAt,
     Expression<String>? cotisationExceptionnelleId,
+    Expression<bool>? estDeductionAutomatique,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -11207,6 +11271,8 @@ class FondsSolidariteContributionsCompanion
       if (recordedAt != null) 'recorded_at': recordedAt,
       if (cotisationExceptionnelleId != null)
         'cotisation_exceptionnelle_id': cotisationExceptionnelleId,
+      if (estDeductionAutomatique != null)
+        'est_deduction_automatique': estDeductionAutomatique,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -11225,6 +11291,7 @@ class FondsSolidariteContributionsCompanion
     Value<String>? recordedByPhone,
     Value<DateTime>? recordedAt,
     Value<String?>? cotisationExceptionnelleId,
+    Value<bool>? estDeductionAutomatique,
     Value<int>? rowid,
   }) {
     return FondsSolidariteContributionsCompanion(
@@ -11242,6 +11309,8 @@ class FondsSolidariteContributionsCompanion
       recordedAt: recordedAt ?? this.recordedAt,
       cotisationExceptionnelleId:
           cotisationExceptionnelleId ?? this.cotisationExceptionnelleId,
+      estDeductionAutomatique:
+          estDeductionAutomatique ?? this.estDeductionAutomatique,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -11290,6 +11359,11 @@ class FondsSolidariteContributionsCompanion
         cotisationExceptionnelleId.value,
       );
     }
+    if (estDeductionAutomatique.present) {
+      map['est_deduction_automatique'] = Variable<bool>(
+        estDeductionAutomatique.value,
+      );
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -11312,6 +11386,7 @@ class FondsSolidariteContributionsCompanion
           ..write('recordedByPhone: $recordedByPhone, ')
           ..write('recordedAt: $recordedAt, ')
           ..write('cotisationExceptionnelleId: $cotisationExceptionnelleId, ')
+          ..write('estDeductionAutomatique: $estDeductionAutomatique, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -29210,6 +29285,7 @@ typedef $$FondsSolidariteContributionsTableCreateCompanionBuilder =
       required String recordedByPhone,
       Value<DateTime> recordedAt,
       Value<String?> cotisationExceptionnelleId,
+      Value<bool> estDeductionAutomatique,
       Value<int> rowid,
     });
 typedef $$FondsSolidariteContributionsTableUpdateCompanionBuilder =
@@ -29227,6 +29303,7 @@ typedef $$FondsSolidariteContributionsTableUpdateCompanionBuilder =
       Value<String> recordedByPhone,
       Value<DateTime> recordedAt,
       Value<String?> cotisationExceptionnelleId,
+      Value<bool> estDeductionAutomatique,
       Value<int> rowid,
     });
 
@@ -29371,6 +29448,11 @@ class $$FondsSolidariteContributionsTableFilterComposer
 
   ColumnFilters<DateTime> get recordedAt => $composableBuilder(
     column: $table.recordedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get estDeductionAutomatique => $composableBuilder(
+    column: $table.estDeductionAutomatique,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -29523,6 +29605,11 @@ class $$FondsSolidariteContributionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get estDeductionAutomatique => $composableBuilder(
+    column: $table.estDeductionAutomatique,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$GroupsTableOrderingComposer get groupId {
     final $$GroupsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -29663,6 +29750,11 @@ class $$FondsSolidariteContributionsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get recordedAt => $composableBuilder(
     column: $table.recordedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get estDeductionAutomatique => $composableBuilder(
+    column: $table.estDeductionAutomatique,
     builder: (column) => column,
   );
 
@@ -29822,6 +29914,7 @@ class $$FondsSolidariteContributionsTableTableManager
                 Value<DateTime> recordedAt = const Value.absent(),
                 Value<String?> cotisationExceptionnelleId =
                     const Value.absent(),
+                Value<bool> estDeductionAutomatique = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FondsSolidariteContributionsCompanion(
                 previousHash: previousHash,
@@ -29837,6 +29930,7 @@ class $$FondsSolidariteContributionsTableTableManager
                 recordedByPhone: recordedByPhone,
                 recordedAt: recordedAt,
                 cotisationExceptionnelleId: cotisationExceptionnelleId,
+                estDeductionAutomatique: estDeductionAutomatique,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -29855,6 +29949,7 @@ class $$FondsSolidariteContributionsTableTableManager
                 Value<DateTime> recordedAt = const Value.absent(),
                 Value<String?> cotisationExceptionnelleId =
                     const Value.absent(),
+                Value<bool> estDeductionAutomatique = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FondsSolidariteContributionsCompanion.insert(
                 previousHash: previousHash,
@@ -29870,6 +29965,7 @@ class $$FondsSolidariteContributionsTableTableManager
                 recordedByPhone: recordedByPhone,
                 recordedAt: recordedAt,
                 cotisationExceptionnelleId: cotisationExceptionnelleId,
+                estDeductionAutomatique: estDeductionAutomatique,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

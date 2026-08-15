@@ -45,6 +45,14 @@ class _CotisationsExceptionnellesScreenState
   }
 
   Future<List<_EvtAvecResume>> _fetch(AppDatabase db) async {
+    // Déduction automatique du solde restant à la date limite — voir
+    // RETOURS_TERRAIN.md, point 25.4. Idempotent (voir la doc de la
+    // méthode), donc sûr de rappeler à chaque ouverture de l'écran.
+    await db.appliquerDeductionsCotisationsExceptionnellesEchues(
+      groupId: widget.groupId,
+      cycleId: widget.cycleId,
+      agentPhone: ref.read(currentPhoneNumberProvider) ?? 'inconnu',
+    );
     final evts = await db.cotisationsExceptionnellesDuCycle(widget.cycleId);
     final resultat = <_EvtAvecResume>[];
     for (final evt in evts) {
@@ -76,7 +84,7 @@ class _CotisationsExceptionnellesScreenState
         builder: (context, setDialogState) => AlertDialog(
           title: Text(
             existing == null
-                ? 'Déclarer une épargne exceptionnelle'
+                ? 'Déclarer une cotisation exceptionnelle'
                 : 'Modifier — ${existing.motif}',
           ),
           content: Form(
@@ -197,7 +205,7 @@ class _CotisationsExceptionnellesScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Épargnes exceptionnelles')),
+      appBar: AppBar(title: const Text('Cotisations exceptionnelles')),
       body: FutureBuilder<List<_EvtAvecResume>>(
         future: _dataFuture,
         builder: (context, snapshot) {
@@ -207,7 +215,7 @@ class _CotisationsExceptionnellesScreenState
           final data = snapshot.data!;
           if (data.isEmpty) {
             return const Center(
-              child: Text('Aucune épargne exceptionnelle déclarée.'),
+              child: Text('Aucune cotisation exceptionnelle déclarée.'),
             );
           }
           return ListView.separated(

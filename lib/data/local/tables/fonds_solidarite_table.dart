@@ -33,6 +33,20 @@ class FondsSolidariteContributions extends Table with HashChainColumns, Provenan
   TextColumn get cotisationExceptionnelleId =>
       text().nullable().references(CotisationsExceptionnelles, #id)();
 
+  /// `true` uniquement pour une ligne écrite automatiquement — jamais
+  /// un vrai versement cash — voir
+  /// [AppDatabase.appliquerDeductionsCotisationsExceptionnellesEchues]
+  /// (RETOURS_TERRAIN.md, point 25.4). Compte pour "solde réglé" (le
+  /// membre ne doit plus rien), mais **jamais** pour le "Collecté"
+  /// affiché sur `cotisations_exceptionnelles_screen.dart` (aucun
+  /// argent réel n'a changé de mains) ni pour la réduction des parts
+  /// reconnues au partage (voir [AppDatabase.preparerPartageCycle], qui
+  /// se base uniquement sur les versements cash pour ne jamais compter
+  /// une même réduction deux fois, que la déduction ait eu lieu
+  /// immédiatement ou seulement à la clôture).
+  BoolColumn get estDeductionAutomatique =>
+      boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -45,9 +59,11 @@ class FondsSolidariteContributions extends Table with HashChainColumns, Provenan
 /// après — même principe que [Members.joinedAt] pour les échéances de
 /// cotisation). Chaque membre doit ce même montant, réglable à tout
 /// moment avant la date limite ; passé ce délai, le solde restant est
-/// automatiquement déduit de ses parts à la clôture du cycle (voir
-/// [AppDatabase.preparerPartageCycle]) — jamais avant, jamais une
-/// dette qui s'accumule.
+/// automatiquement déduit de son épargne **immédiatement** (voir
+/// [AppDatabase.appliquerDeductionsCotisationsExceptionnellesEchues],
+/// RETOURS_TERRAIN.md point 25.4, 2026-08-13 — remplace l'ancien
+/// comportement qui attendait la clôture du cycle) — jamais avant,
+/// jamais une dette qui s'accumule.
 ///
 /// Table financière en ajout seul pour l'événement lui-même (comme
 /// [Amendes]) — mais `motif`/`montantFcfa`/`dateLimite` restent

@@ -28,7 +28,6 @@ class _RecordCotisationScreenState
     extends ConsumerState<RecordCotisationScreen> {
   late Future<List<Member>> _membersFuture;
   late Future<DateTime?> _journeeOuverteFuture;
-  late Future<SeancesCotisationData?> _derniereSeanceFuture;
   late Future<List<MotifsAmendeData>> _motifsActifsFuture;
 
   @override
@@ -49,7 +48,6 @@ class _RecordCotisationScreenState
         cycleId: widget.cycleId,
         agentPhone: ref.read(currentPhoneNumberProvider) ?? 'inconnu',
       );
-      _derniereSeanceFuture = db.derniereSeanceCloturee(widget.cycleId);
       _motifsActifsFuture = db.motifsAmendeActifsDuGroupe(widget.groupId);
     });
   }
@@ -114,9 +112,17 @@ class _RecordCotisationScreenState
   /// 3 prédéfinis (Absence / Part impayée / Payé par un tiers), choisi
   /// **le jour même**, jamais différé à la séance suivante (voir
   /// DECISIONS.md, "Clôture de journée interactive" — remplace
-  /// entièrement l'ancienne revue différée). Pré-rempli sur "Absence"
-  /// (le cas le plus courant), modifiable ligne par ligne avant de
-  /// valider. La clôture ne s'exécute que si l'agent valide cet écran.
+  /// entièrement l'ancienne revue différée).
+  ///
+  /// **Aucun motif pré-sélectionné par défaut** (revu le 2026-08-14,
+  /// annule le repli automatique sur "Absence" décrit à l'origine dans
+  /// DECISIONS.md) : le fondateur a explicitement demandé qu'aucune
+  /// amende ne puisse jamais s'appliquer sans un choix actif de l'agent,
+  /// carnet par carnet — "Clôturer définitivement" reste désactivé tant
+  /// qu'il en manque un. Seule exception, qui reste un choix explicite
+  /// et non un défaut caché : un carnet déjà anticipé plus tôt dans la
+  /// journée (écran "Séance du jour", voir RETOURS_TERRAIN.md, point 6)
+  /// reste pré-rempli avec ce choix-là.
   Future<void> _cloturerJournee(DateTime date) async {
     final db = ref.read(databaseProvider);
     final aTraiter = await db.carnetsATraiterPourDate(
@@ -126,23 +132,20 @@ class _RecordCotisationScreenState
     );
     if (!mounted) return;
 
-    // Pré-rempli avec ce que l'agent a déjà décidé pendant la journée
-    // depuis l'écran "Séance du jour" (voir RETOURS_TERRAIN.md, point 6)
-    // — "Absence" reste le repli par défaut pour tout carnet non encore
-    // anticipé, comme avant.
     final anticipees = await db.presenceAnticipeeDuJour(
       cycleId: widget.cycleId,
       date: date,
     );
     if (!mounted) return;
-    final resolutions = <String, String>{
+    // `null` = pas encore choisi par l'agent — jamais de repli
+    // automatique sur "Absence".
+    final resolutions = <String, String?>{
       for (final r in aTraiter)
         AppDatabase.clefResolutionCarnet(r.membre.id, r.carnetNumero):
             anticipees[AppDatabase.clefResolutionCarnet(
-                  r.membre.id,
-                  r.carnetNumero,
-                )] ??
-                AppDatabase.codeSystemeAbsence,
+              r.membre.id,
+              r.carnetNumero,
+            )],
     };
     const libellesMotifs = {
       AppDatabase.codeSystemeAbsence: 'Absence',
@@ -153,80 +156,103 @@ class _RecordCotisationScreenState
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-            'La réunion est terminée — clôturer le '
-            '${date.day}/${date.month}/${date.year} ?',
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (aTraiter.isEmpty)
-                  const Text(
-                    'Tous les membres figurent sur la liste définitive du jour.',
-                  )
-                else ...[
-                  Text(
-                    '${aTraiter.length} carnet(s) sans rien d\'enregistré — '
-                    'précisez pourquoi avant de clôturer :',
-                    style: Theme.of(context).textTheme.titleSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  ...aTraiter.map((r) {
-                    final cle = AppDatabase.clefResolutionCarnet(
-                      r.membre.id,
-                      r.carnetNumero,
-                    );
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${r.membre.fullName} — carnet ${r.carnetNumero}',
+        builder: (context, setDialogState) {
+          final tousResolus = aTraiter.every(
+            (r) =>
+                resolutions[AppDatabase.clefResolutionCarnet(
+                  r.membre.id,
+                  r.carnetNumero,
+                )] !=
+                null,
+          );
+          return AlertDialog(
+            title: Text(
+              'La réunion est terminée — clôturer le '
+              '${date.day}/${date.month}/${date.year} ?',
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (aTraiter.isEmpty)
+                    const Text(
+                      'Tous les membres figurent sur la liste définitive du jour.',
+                    )
+                  else ...[
+                    Text(
+                      '${aTraiter.length} carnet(s) sans rien d\'enregistré — '
+                      'précisez pourquoi avant de clôturer (obligatoire pour '
+                      'chacun) :',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    ...aTraiter.map((r) {
+                      final cle = AppDatabase.clefResolutionCarnet(
+                        r.membre.id,
+                        r.carnetNumero,
+                      );
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${r.membre.fullName} — carnet ${r.carnetNumero}',
+                              ),
                             ),
-                          ),
-                          DropdownButton<String>(
-                            value: resolutions[cle],
-                            items: [
-                              for (final code in r.motifsPossibles)
-                                DropdownMenuItem(
-                                  value: code,
-                                  child: Text(libellesMotifs[code] ?? code),
-                                ),
-                            ],
-                            onChanged: (v) => setDialogState(() {
-                              resolutions[cle] =
-                                  v ?? AppDatabase.codeSystemeAbsence;
-                            }),
-                          ),
-                        ],
+                            DropdownButton<String>(
+                              value: resolutions[cle],
+                              hint: const Text('Choisir…'),
+                              items: [
+                                for (final code in r.motifsPossibles)
+                                  DropdownMenuItem(
+                                    value: code,
+                                    child: Text(libellesMotifs[code] ?? code),
+                                  ),
+                              ],
+                              onChanged: (v) =>
+                                  setDialogState(() => resolutions[cle] = v),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    if (!tousResolus) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Choisissez un motif pour chaque carnet listé ci-dessus.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
-                    );
-                  }),
+                    ],
+                  ],
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Définitif : cette date ne pourra plus recevoir de nouvel '
+                    'encaissement une fois clôturée, et il ne sera plus possible '
+                    'de revenir en arrière.',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ],
-                const SizedBox(height: 16),
-                const Text(
-                  'Cette date ne pourra plus recevoir de nouvel encaissement une fois '
-                  'clôturée.',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Revoir'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Clôturer définitivement'),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Revoir'),
+              ),
+              FilledButton(
+                onPressed: tousResolus
+                    ? () => Navigator.of(context).pop(true)
+                    : null,
+                child: const Text('Clôturer définitivement'),
+              ),
+            ],
+          );
+        },
       ),
     );
     if (confirme != true) return;
@@ -236,26 +262,11 @@ class _RecordCotisationScreenState
       cycleId: widget.cycleId,
       date: date,
       agentPhone: agentPhone,
-      resolutions: resolutions,
+      // Sûr : le bouton n'était activable que si `tousResolus` — chaque
+      // valeur est garantie non nulle ici.
+      resolutions: resolutions.map((k, v) => MapEntry(k, v!)),
     );
     _reload();
-  }
-
-  Future<void> _annulerClotureJournee(SeancesCotisationData seance) async {
-    final db = ref.read(databaseProvider);
-    final agentPhone = ref.read(currentPhoneNumberProvider) ?? 'inconnu';
-    try {
-      await db.annulerClotureJournee(
-        seanceId: seance.id,
-        annuleParPhone: agentPhone,
-      );
-      _reload();
-    } on StateError catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
-    }
   }
 
   Widget _ligneEcheance(Echeance ligne, Map<String, Member> membresParId) {
@@ -391,30 +402,6 @@ class _RecordCotisationScreenState
                           child: const Text('Clôturer cette journée'),
                         ),
                       ],
-                    ),
-                  );
-                },
-              ),
-              FutureBuilder<SeancesCotisationData?>(
-                future: _derniereSeanceFuture,
-                builder: (context, snapshot) {
-                  final seance = snapshot.data;
-                  if (seance == null) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: () => _annulerClotureJournee(seance),
-                        child: Text(
-                          'Annuler la clôture du '
-                          '${seance.date.day}/${seance.date.month}/${seance.date.year} '
-                          '(uniquement si rien n\'a été enregistré depuis)',
-                        ),
-                      ),
                     ),
                   );
                 },

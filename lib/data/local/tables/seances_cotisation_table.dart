@@ -16,13 +16,12 @@ import 'cycles_table.dart';
 ///    plus les inscriptions, voir DECISIONS.md, "Inscription de
 ///    nouveaux membres : sans limite, sauf fin de cycle").
 ///
-/// Contrairement aux tables financières, une clôture faite par erreur
-/// peut être **supprimée directement** — même principe que
-/// `annulerClotureCycle` pour un cycle — mais uniquement si rien ne
-/// s'est passé depuis (aucune cotisation enregistrée après ce moment) :
-/// voir `AppDatabase.annulerClotureJournee`. Pas de risque d'intégrité à
-/// protéger tant que cette condition tient, donc pas besoin d'une table
-/// d'annulation séparée comme pour les amendes/prêts.
+/// **Définitif, sans mécanisme d'annulation** (voir DECISIONS.md,
+/// "Suppression d'Annuler la clôture", 2026-08-13) : une clôture faite
+/// par erreur n'est plus rattrapable, contrairement à l'ancien
+/// comportement (`annulerClotureJournee`, retiré) qui la permettait
+/// tant que rien ne s'était passé depuis — l'agent doit être certain
+/// avant de clôturer.
 class SeancesCotisation extends Table with HashChainColumns {
   @override
   String get tableName => 'seances_cotisation';

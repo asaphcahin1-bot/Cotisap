@@ -2454,3 +2454,176 @@ peut poser une amende sans ligne `Echeances`). Aucune migration de
 données nécessaire — le correctif empêche une nouvelle corruption sans
 tenter de réparer d'éventuelles doubles lignes déjà écrites sur le
 terrain (aucune connue à ce jour).
+
+## Clôture bloquée par un doublon déjà écrit avant le correctif (2026-08-14)
+
+**Retour terrain** : le correctif ci-dessus n'a pas suffi — la clôture
+restait bloquée sur un APK déjà censé le contenir. Cause : le correctif
+du 2026-08-13 protège uniquement l'**écriture** (`motifsSystemeApplicables`
+empêche une nouvelle ligne en double), mais trois fonctions de
+**lecture** utilisaient encore `getSingleOrNull` seul sur `Echeances`
+filtré par (membre, carnet, date) — `membresAbsentsPourDate`,
+`carnetsATraiterPourDate`, `cloturerJourneeCotisation` elle-même.
+`getSingleOrNull` lève une exception dès qu'un **deuxième** résultat
+existe. Une seule ligne en double écrite sur un appareil de terrain
+avant le 2026-08-13 restait donc piégée en base **définitivement** :
+aucune mise à jour de code ne l'efface, et les trois fonctions
+continuaient de planter sur ce même triplet à chaque nouvelle
+ouverture de l'app, y compris via le filet de sécurité 23h (qui appelle
+`cloturerJourneeCotisation` en interne).
+
+**Correction** : nouveau helper `_derniereEcheancePourCarnet`
+(`orderBy(desc) + limit(1)` avant `getSingleOrNull`, garantit au plus
+un résultat quel que soit le nombre de lignes réellement présentes),
+qui remplace les 3 requêtes fragiles. Cohérent avec la doc de classe
+d'`Echeances` elle-même ("la lecture retient toujours la ligne la plus
+récente pour un triplet") et avec `_echeancesResoluesDuCycle`, qui
+appliquait déjà cette règle correctement ailleurs. Aucune migration,
+aucune suppression de donnée — un doublon déjà écrit reste en base
+mais ne fait plus jamais planter la lecture.
+
+**Test de régression** : `test/data/local/echeance_dupliquee_deja_existante_test.dart`
+— écrit directement deux lignes `Echeances` pour le même triplet (en
+contournant les garde-fous actuels, pour reproduire une base non
+corrigée) et vérifie que les trois fonctions ne plantent plus. Vérifié
+contre l'ancien code (`git stash` sur `database.dart` seul) avant
+correction : échoue bien avec `Bad state: Too many elements` sur
+`getSingleOrNull`, confirmant le mécanisme exact du bug.
+
+## Amendes : plus aucun motif pré-sélectionné à la clôture (2026-08-14)
+
+**Décision, précisée par le fondateur** : "Clôture de journée
+interactive" (2026-08-11, ci-dessus) pré-remplissait chaque carnet non
+traité sur "Absence" — modifiable, mais un agent qui validait sans
+toucher au dropdown appliquait quand même une amende par défaut. Le
+fondateur a explicitement demandé qu'aucune amende ne puisse jamais
+s'appliquer sans un choix actif de l'agent, carnet par carnet — "il
+n'y a plus d'amende automatique, quelle que soit la raison".
+
+**Correction** : `resolutions` passe de `Map<String, String>` à
+`Map<String, String?>` — `null` tant que l'agent n'a rien choisi,
+jamais de repli implicite sur "Absence". Le dropdown affiche un indice
+("Choisir…") plutôt qu'une valeur pré-sélectionnée. "Clôturer
+définitivement" reste désactivé tant qu'il manque un choix pour au
+moins un carnet, avec un message explicite. Seule exception, qui reste
+un vrai choix explicite et non un défaut caché : un carnet déjà
+anticipé plus tôt dans la journée (écran "Séance du jour") reste
+pré-rempli avec ce choix-là, puisque l'agent l'a déjà décidé lui-même.
+
+**Portée limitée à l'écran interactif** : `cloturerJourneeCotisation`
+retombe toujours sur "Absence" côté base pour un appel qui ne fournit
+pas de `resolutions` (import historique, tests, autres appelants
+programmatiques) — comportement historique préservé, sans lien avec un
+agent humain face à un écran.
+
+## Écran Cotisation : membre suivant plus visible (2026-08-13)
+
+**Décision, confirmée par le fondateur** (voir RETOURS_TERRAIN.md,
+point 25.1/25.2) : l'agent pouvait changer de membre après
+"Enregistrer et passer au membre suivant" sans s'en rendre compte —
+seul le nom en haut de page, en petit, changeait. Le nom, le numéro de
+carnet et le nombre de parts déjà achetées aujourd'hui sont les 3
+informations les plus importantes de cet écran pour l'agent sur le
+terrain.
+
+**Implémentation** : `cotisation_membre_screen.dart` — ces 3 infos
+regroupées dans une carte à fort contraste (`colorScheme.primaryContainer`,
+texte large et gras) en tête d'écran, plus un `SnackBar` explicite
+("✓ [ancien membre] enregistré — passage à [nouveau membre]") au
+moment du passage au membre suivant, en plus de la carte qui change.
+
+## Renommage partiel annulé : "Épargne exceptionnelle" → "Cotisation exceptionnelle" (2026-08-13)
+
+**Décision, confirmée par le fondateur** (voir RETOURS_TERRAIN.md,
+point 25.3) : annule, uniquement pour ce terme précis, le renommage
+"Cotisation" → "Épargne" du 2026-08-13 (voir plus haut) — "Cotisation
+exceptionnelle" redevient le texte affiché partout où il apparaît.
+Le reste du renommage ("Épargne", "Épargnes (cash)", "Total épargne",
+etc.) reste inchangé. Toujours uniquement le texte affiché, jamais le
+code (`CotisationsExceptionnelles`, `cotisations_exceptionnelles_screen.dart`,
+etc. restent tels quels).
+
+## Suppression d'"Annuler la clôture" (2026-08-13)
+
+**Décision, confirmée par le fondateur** (voir RETOURS_TERRAIN.md,
+point 25.5) : plus aucune possibilité de revenir sur une journée de
+cotisation déjà clôturée, même si rien n'a été enregistré depuis.
+Annule la fonctionnalité introduite avec la clôture explicite (voir
+"Clôture de la journée de cotisation").
+
+**Implémentation** : `AppDatabase.annulerClotureJournee` retiré
+entièrement (plus seulement caché côté écran) ; bouton et message
+correspondants retirés de `record_cotisation_screen.dart`. Le message
+de confirmation avant clôture insiste désormais explicitement sur le
+caractère définitif ("il ne sera plus possible de revenir en
+arrière").
+
+## Dates de début/fin de cycle affichées (2026-08-13)
+
+**Décision, confirmée par le fondateur** (voir RETOURS_TERRAIN.md,
+point 25.6) : la date de début du cycle et sa date de fin prévue
+(calculée depuis la durée choisie à la création du groupe) doivent
+être visibles à l'écran, pour vérifier que les choix faits à la
+création sont respectés.
+
+**Implémentation** : `AppDatabase._finDeCycle` rendu public
+(`finDeCyclePrevue`) — calcul déjà existant (utilisé par
+`LoanRateResolver`/`LoanWindowCalculator`), maintenant réutilisé plutôt
+que dupliqué. Affiché en tête de `cycle_summary_screen.dart` (écran
+Répartition), avec le numéro et le statut du cycle.
+
+## Déduction automatique immédiate d'une cotisation exceptionnelle échue (2026-08-13)
+
+**Décision, confirmée par le fondateur** (voir RETOURS_TERRAIN.md,
+point 25.4, question posée explicitement) : quand la date limite d'une
+cotisation exceptionnelle passe sans paiement complet, le solde
+restant de chaque membre éligible doit être déduit de son épargne
+**immédiatement** — pas seulement à la clôture du cycle, comme c'était
+déjà le cas depuis l'origine de cette fonctionnalité (voir
+`AppDatabase.preparerPartageCycle`, doc de
+[CotisationsExceptionnelles]). Le fondateur a explicitement choisi
+cette option plutôt que de garder le comportement à la clôture
+seulement (l'alternative que j'avais recommandée par défaut).
+
+**Piège identifié et corrigé avant de livrer** : une première version
+écrivait la déduction immédiate comme un simple versement dans
+`FondsSolidariteContributions` (même table que les vrais paiements
+cash). Un test de bout en bout a immédiatement révélé le problème :
+`preparerPartageCycle` calcule la réduction des parts reconnues à
+partir de `soldeCotisationExceptionnelleFcfa` (solde encore dû) — une
+fois la déduction immédiate écrite, ce solde retombe à 0, et
+`preparerPartageCycle` **sautait alors la réduction**, comme si le
+membre avait payé cash alors qu'aucun argent réel n'avait été reçu :
+son épargne recommençait à générer une part du bénéfice collectif sur
+la totalité de ses parts, sans jamais avoir réglé son dû.
+
+**Correction retenue** : nouvelle colonne
+`FondsSolidariteContributions.estDeductionAutomatique` (schemaVersion
+22) qui distingue une ligne écrite automatiquement d'un vrai versement
+cash :
+- `soldeCotisationExceptionnelleFcfa` / `cotisationsExceptionnellesNonSoldeesDuMembre`
+  comptent les deux de la même façon (le membre ne doit plus rien une
+  fois déduit, automatiquement ou en cash) ;
+- `resumeCotisationExceptionnelle` ("Collecté : X/Y FCFA") et
+  `totalFondsSolidarite` ("Fonds de solidarité : X FCFA") **excluent**
+  les lignes automatiques — ces totaux ne reflètent jamais que de
+  l'argent réellement en caisse ;
+- `preparerPartageCycle` calcule désormais la réduction des parts
+  reconnues à partir du **cash reçu uniquement**
+  (`_totalVerseCashCotisationExceptionnelle`), jamais du solde restant
+  — la réduction reste donc identique, que la déduction immédiate ait
+  déjà eu lieu ou non, éliminant le risque de double compte ou de
+  saut ;
+- `cloturerCycleEtOuvrirSuivant` (clôture réelle) vérifie
+  `_totalDejaDeduitAutomatiquement` avant d'écrire sa propre ligne
+  automatique, pour ne jamais réécrire ce qu'une déduction immédiate a
+  déjà réglé.
+
+**Implémentation** : `AppDatabase.appliquerDeductionsCotisationsExceptionnellesEchues({groupId,
+cycleId, agentPhone})` — pour chaque cotisation exceptionnelle du
+cycle dont la date limite est dépassée, pour chaque membre éligible
+avec un solde restant, écrit une ligne automatique. Idempotent (le
+solde retombe à 0 après écriture). Appelée à chaque ouverture de
+`cotisations_exceptionnelles_screen.dart` et `cotisation_membre_screen.dart`
+— même principe que le filet de sécurité 23h des journées de
+cotisation. Sans effet sur un cycle déjà clos.

@@ -181,7 +181,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 ),
                 _NavCard(
                   icon: Icons.favorite_border,
-                  title: 'Épargnes exceptionnelles',
+                  title: 'Cotisations exceptionnelles',
                   onTap: () async {
                     await Navigator.of(context).push(
                       MaterialPageRoute(

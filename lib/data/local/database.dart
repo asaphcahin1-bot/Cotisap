@@ -71,7 +71,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
   @override
-  int get schemaVersion => 21;
+  int get schemaVersion => 22;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -239,6 +239,16 @@ class AppDatabase extends _$AppDatabase {
         // présence anticipée par carnet, saisie pendant la journée,
         // relue comme valeur par défaut à la clôture.
         await m.createTable(presenceAnticipee);
+      }
+      if (from < 22) {
+        // Déduction automatique immédiate d'une cotisation exceptionnelle
+        // échue (voir RETOURS_TERRAIN.md, point 25.4, et DECISIONS.md) :
+        // distingue une ligne écrite automatiquement (aucun argent réel)
+        // d'un vrai versement cash.
+        await m.addColumn(
+          fondsSolidariteContributions,
+          fondsSolidariteContributions.estDeductionAutomatique,
+        );
       }
     },
   );
@@ -503,7 +513,7 @@ class AppDatabase extends _$AppDatabase {
       )..where((g) => g.id.equals(groupId))).getSingle();
       final ferme = const MembershipClosureCalculator().inscriptionsFermees(
         debutCycle: cycle.startedAt,
-        finDeCycle: _finDeCycle(cycle, groupe),
+        finDeCycle: finDeCyclePrevue(cycle, groupe),
         meetingFrequency: groupe.meetingFrequency,
         paymentDayOfWeek: groupe.paymentDayOfWeek,
         paymentDayOfMonth1: groupe.paymentDayOfMonth1,
@@ -755,15 +765,26 @@ class AppDatabase extends _$AppDatabase {
         // ajoutées à la caisse principale (déjà exclu du calcul
         // ci-dessus, voir [preparerPartageCycle]).
         for (final d in prepared.cotisationsExceptionnellesADeduire) {
+          // Peut avoir déjà été écrite avant la clôture (voir
+          // [appliquerDeductionsCotisationsExceptionnellesEchues],
+          // RETOURS_TERRAIN.md point 25.4) — ne complète que ce qui
+          // manque encore, jamais une deuxième fois le même montant.
+          final dejaDeduit = await _totalDejaDeduitAutomatiquement(
+            cotisationExceptionnelleId: d.cotisationExceptionnelleId,
+            memberId: d.memberId,
+          );
+          final aEcrire = d.montantFcfa - dejaDeduit;
+          if (aEcrire <= 0) continue;
           await enregistrerContributionFondsSolidarite(
             groupId: groupId,
             cycleId: cycleIdACloturer,
             memberId: d.memberId,
-            montantFcfa: d.montantFcfa,
+            montantFcfa: aEcrire,
             motif: 'Cotisation exceptionnelle non payée à temps — '
                 'déduite automatiquement à la clôture',
             recordedByPhone: recordedByPhone,
             cotisationExceptionnelleId: d.cotisationExceptionnelleId,
+            estDeductionAutomatique: true,
           );
         }
       }
@@ -1620,7 +1641,12 @@ class AppDatabase extends _$AppDatabase {
   /// `loans_screen.dart` (même calcul, 4 lignes) plutôt que de faire
   /// dépendre la couche base d'un widget — pas de dépendance partagée
   /// pour un calcul aussi simple.
-  DateTime _finDeCycle(Cycle cycle, Group groupe) {
+  ///
+  /// Public depuis le 2026-08-13 (voir RETOURS_TERRAIN.md, point 25.6) :
+  /// affichée sur l'écran Répartition à côté de la date de début, pour
+  /// que l'agent vérifie que les choix faits à la création du groupe
+  /// (durée du cycle) sont bien respectés.
+  DateTime finDeCyclePrevue(Cycle cycle, Group groupe) {
     return DateTime(
       cycle.startedAt.year,
       cycle.startedAt.month + groupe.cycleDurationMonths,
@@ -1716,7 +1742,7 @@ class AppDatabase extends _$AppDatabase {
       empruntesEnCoursFcfa: empruntesEnCoursFcfa,
       principalDemandeFcfa: nouveauPrincipal,
       maintenant: now,
-      finDeCycle: _finDeCycle(cycle, groupe),
+      finDeCycle: finDeCyclePrevue(cycle, groupe),
     );
 
     return enregistrerPret(
@@ -1795,7 +1821,7 @@ class AppDatabase extends _$AppDatabase {
       empruntesEnCoursFcfa: empruntesEnCoursFcfa,
       principalDemandeFcfa: solde.montantDuFcfa,
       maintenant: now,
-      finDeCycle: _finDeCycle(nouveauCycle, groupe),
+      finDeCycle: finDeCyclePrevue(nouveauCycle, groupe),
     );
 
     return enregistrerPret(
@@ -1997,7 +2023,7 @@ class AppDatabase extends _$AppDatabase {
       empruntesEnCoursFcfa: empruntesEnCoursFcfa,
       principalDemandeFcfa: montantAccepteFcfa,
       maintenant: now,
-      finDeCycle: _finDeCycle(cycle, groupe),
+      finDeCycle: finDeCyclePrevue(cycle, groupe),
     );
 
     return enregistrerPret(
@@ -2568,6 +2594,45 @@ class AppDatabase extends _$AppDatabase {
           ..where((m) => m.groupId.equals(groupId) & m.actif.equals(true))
           ..orderBy([(m) => OrderingTerm.asc(m.libelle)]))
         .get();
+  }
+
+  /// Dernière ligne [Echeances] connue pour un triplet (membre, carnet,
+  /// échéance), ou `null` si aucune n'existe encore.
+  ///
+  /// **Jamais `getSingleOrNull` sans `limit(1)` sur cette table** — voir
+  /// la doc de classe d'[Echeances] : plusieurs lignes par triplet sont
+  /// tolérées par construction ("la lecture retient toujours la ligne la
+  /// plus récente"), `getSingleOrNull` seul lève une exception dès qu'un
+  /// deuxième résultat existe. Le correctif du 2026-08-13 sur
+  /// [motifsSystemeApplicables] (voir DECISIONS.md, "Correction de
+  /// motifsSystemeApplicables — carnet déjà résolu") a supprimé la
+  /// possibilité d'écrire un nouveau doublon, mais un doublon déjà écrit
+  /// avant ce correctif — sur un appareil de terrain resté ouvert
+  /// plusieurs jours, par exemple — continuait de faire planter
+  /// [membresAbsentsPourDate], [carnetsATraiterPourDate] et
+  /// [cloturerJourneeCotisation] à chaque lecture, indéfiniment, sur ce
+  /// même triplet (retour terrain du 2026-08-14 : la clôture restait
+  /// bloquée malgré l'APK déjà corrigé). Ce helper centralise la lecture
+  /// tolérante — `orderBy(desc) + limit(1)` garantit au plus un résultat
+  /// quel que soit le nombre de lignes réellement présentes, sans jamais
+  /// planter et sans avoir besoin de toucher aux données existantes.
+  Future<Echeance?> _derniereEcheancePourCarnet({
+    required String memberId,
+    required String cycleId,
+    required int carnetNumero,
+    required DateTime echeanceDate,
+  }) {
+    return (select(echeances)
+          ..where(
+            (e) =>
+                e.memberId.equals(memberId) &
+                e.cycleId.equals(cycleId) &
+                e.carnetNumero.equals(carnetNumero) &
+                e.echeanceDate.equals(echeanceDate),
+          )
+          ..orderBy([(e) => OrderingTerm.desc(e.recordedAt)])
+          ..limit(1))
+        .getSingleOrNull();
   }
 
   /// Détermine quels motifs **système** (absence / part impayée / payé
@@ -3275,15 +3340,12 @@ class AppDatabase extends _$AppDatabase {
         carnetNumero <= carnets.nombreCarnets;
         carnetNumero++
       ) {
-        final existante =
-            await (select(echeances)..where(
-                  (e) =>
-                      e.memberId.equals(membre.id) &
-                      e.cycleId.equals(cycleId) &
-                      e.carnetNumero.equals(carnetNumero) &
-                      e.echeanceDate.equals(date),
-                ))
-                .getSingleOrNull();
+        final existante = await _derniereEcheancePourCarnet(
+          memberId: membre.id,
+          cycleId: cycleId,
+          carnetNumero: carnetNumero,
+          echeanceDate: date,
+        );
         if (existante == null) {
           resultat.add(membre);
           break; // une seule entrée par membre, même si plusieurs carnets manquent
@@ -3329,15 +3391,12 @@ class AppDatabase extends _$AppDatabase {
         carnetNumero <= carnets.nombreCarnets;
         carnetNumero++
       ) {
-        final existante =
-            await (select(echeances)..where(
-                  (e) =>
-                      e.memberId.equals(membre.id) &
-                      e.cycleId.equals(cycleId) &
-                      e.carnetNumero.equals(carnetNumero) &
-                      e.echeanceDate.equals(date),
-                ))
-                .getSingleOrNull();
+        final existante = await _derniereEcheancePourCarnet(
+          memberId: membre.id,
+          cycleId: cycleId,
+          carnetNumero: carnetNumero,
+          echeanceDate: date,
+        );
         if (existante != null) continue;
 
         final motifs = await motifsSystemeApplicables(
@@ -3490,15 +3549,12 @@ class AppDatabase extends _$AppDatabase {
           carnetNumero <= carnets.nombreCarnets;
           carnetNumero++
         ) {
-          final existante =
-              await (select(echeances)..where(
-                    (e) =>
-                        e.memberId.equals(membre.id) &
-                        e.cycleId.equals(cycleId) &
-                        e.carnetNumero.equals(carnetNumero) &
-                        e.echeanceDate.equals(date),
-                  ))
-                  .getSingleOrNull();
+          final existante = await _derniereEcheancePourCarnet(
+            memberId: membre.id,
+            cycleId: cycleId,
+            carnetNumero: carnetNumero,
+            echeanceDate: date,
+          );
           if (existante != null)
             continue; // déjà payé ou déjà tracé pour cette date
 
@@ -3722,64 +3778,6 @@ class AppDatabase extends _$AppDatabase {
     };
   }
 
-  /// Annule une clôture de journée faite par erreur — **uniquement si
-  /// rien ne s'est passé depuis** (aucune cotisation enregistrée après
-  /// ce moment). Contrairement aux tables financières, supprime
-  /// directement la séance et les lignes [Echeances]/amendes qu'elle a
-  /// créées : même logique que [annulerClotureCycle], sûre uniquement
-  /// tant que rien d'autre n'en dépend encore.
-  Future<void> annulerClotureJournee({
-    required String seanceId,
-    required String annuleParPhone,
-  }) {
-    return transaction(() async {
-      final seance = await (select(
-        seancesCotisation,
-      )..where((s) => s.id.equals(seanceId))).getSingle();
-
-      // Comparé à la date de la séance elle-même (pas à l'horodatage réel
-      // de la clôture) : ce qui compte est qu'aucune échéance postérieure
-      // n'ait déjà été réglée, pas le temps écoulé côté horloge — un
-      // agent peut très bien saisir plusieurs séances d'affilée en une
-      // seule session, bien après les dates réelles concernées.
-      final cotisationsDepuis =
-          await (select(cotisations)..where(
-                (c) =>
-                    c.cycleId.equals(seance.cycleId) &
-                    c.recordedAt.isBiggerThanValue(seance.date),
-              ))
-              .get();
-      if (cotisationsDepuis.isNotEmpty) {
-        throw StateError(
-          'Impossible d\'annuler : une cotisation a déjà été enregistrée pour une '
-          'échéance postérieure à cette clôture.',
-        );
-      }
-
-      final lignesCreees =
-          await (select(echeances)..where(
-                (e) =>
-                    e.cycleId.equals(seance.cycleId) &
-                    e.echeanceDate.equals(seance.date) &
-                    e.statut.equals('non_paye'),
-              ))
-              .get();
-      for (final ligne in lignesCreees) {
-        if (ligne.amendeId != null) {
-          await annulerAmende(
-            amendeId: ligne.amendeId!,
-            raison: 'Clôture de journée annulée par erreur',
-            annuleParPhone: annuleParPhone,
-          );
-        }
-        await (delete(echeances)..where((e) => e.id.equals(ligne.id))).go();
-      }
-      await (delete(
-        seancesCotisation,
-      )..where((s) => s.id.equals(seanceId))).go();
-    });
-  }
-
   /// Dette totale d'un membre au moment du partage de fin de cycle :
   /// **uniquement le solde de prêt confirmé non remboursé** (voir
   /// DECISIONS.md, "Les amendes ne sont plus une dette", 2026-08-09) —
@@ -3916,10 +3914,22 @@ class AppDatabase extends _$AppDatabase {
           reductionAmendes.partsReconnues * cycle.partValueFcfa +
           reductionAmendes.residuFcfa;
       for (final evt in evtsEchus) {
-        final soldeEvt = await soldeCotisationExceptionnelleFcfa(
+        // Basé sur le cash réellement reçu, jamais sur
+        // soldeCotisationExceptionnelleFcfa (qui compte aussi les
+        // déductions automatiques déjà écrites, voir
+        // appliquerDeductionsCotisationsExceptionnellesEchues) — sinon
+        // cette réduction serait sautée dès qu'une déduction immédiate a
+        // déjà eu lieu, l'annulant à tort au moment du partage.
+        final eligible = await _membreEligibleCotisationExceptionnelle(
+          memberId: memberId,
           evt: evt,
+        );
+        if (!eligible) continue;
+        final cashVerse = await _totalVerseCashCotisationExceptionnelle(
+          cotisationExceptionnelleId: evt.id,
           memberId: memberId,
         );
+        final soldeEvt = evt.montantFcfa - cashVerse;
         if (soldeEvt <= 0) continue;
         final reductionEvt = const AmendeReductionCalculator().calculer(
           rawCotisationFcfa: resteFcfa,
@@ -4122,6 +4132,7 @@ class AppDatabase extends _$AppDatabase {
     bool estApproximatif = false,
     DateTime? recordedAt,
     String? cotisationExceptionnelleId,
+    bool estDeductionAutomatique = false,
   }) async {
     final id = _uuid.v4();
     final horodatage = recordedAt ?? AppClock.now();
@@ -4151,6 +4162,7 @@ class AppDatabase extends _$AppDatabase {
         montantFcfa: montantFcfa,
         motif: motif,
         recordedByPhone: recordedByPhone,
+        estDeductionAutomatique: Value(estDeductionAutomatique),
         recordedAt: Value(horodatage),
         previousHash: Value(previousHash),
         hash: hash,
@@ -4162,10 +4174,18 @@ class AppDatabase extends _$AppDatabase {
     return id;
   }
 
+  /// Exclut toute ligne [estDeductionAutomatique] (voir
+  /// RETOURS_TERRAIN.md, point 25.4) — cette caisse n'affiche jamais que
+  /// de l'argent réellement reçu, jamais une déduction automatique
+  /// d'épargne qui n'y a jamais transité.
   Future<int> totalFondsSolidarite(String groupId) async {
-    final rows = await (select(
-      fondsSolidariteContributions,
-    )..where((f) => f.groupId.equals(groupId))).get();
+    final rows =
+        await (select(fondsSolidariteContributions)..where(
+              (f) =>
+                  f.groupId.equals(groupId) &
+                  f.estDeductionAutomatique.equals(false),
+            ))
+            .get();
     return rows.fold<int>(0, (sum, f) => sum + f.montantFcfa);
   }
 
@@ -4460,7 +4480,9 @@ class AppDatabase extends _$AppDatabase {
   /// Nombre de membres éligibles (déjà présents à la déclaration, voir
   /// [CotisationsExceptionnelles]) et total déjà collecté pour cet
   /// événement, tous membres confondus — vue d'ensemble pour l'écran de
-  /// déclaration.
+  /// déclaration. `totalCollecteFcfa` ne compte jamais une déduction
+  /// automatique (voir [estDeductionAutomatique]) : ce chiffre reflète
+  /// uniquement l'argent réellement en caisse.
   Future<({int membresEligibles, int totalCollecteFcfa})>
   resumeCotisationExceptionnelle(CotisationsExceptionnelle evt) async {
     final membresGroupe = await membresDuGroupe(evt.groupId);
@@ -4470,11 +4492,129 @@ class AppDatabase extends _$AppDatabase {
     }
     final rows =
         await (select(fondsSolidariteContributions)..where(
-              (f) => f.cotisationExceptionnelleId.equals(evt.id),
+              (f) =>
+                  f.cotisationExceptionnelleId.equals(evt.id) &
+                  f.estDeductionAutomatique.equals(false),
             ))
             .get();
     final totalCollecte = rows.fold<int>(0, (s, f) => s + f.montantFcfa);
     return (membresEligibles: eligibles, totalCollecteFcfa: totalCollecte);
+  }
+
+  /// Déduit automatiquement, **immédiatement**, le solde restant de
+  /// chaque membre éligible pour toute cotisation exceptionnelle de ce
+  /// cycle dont la date limite est dépassée — voir RETOURS_TERRAIN.md,
+  /// point 25.4 : avant cette décision, ce même mécanisme n'existait
+  /// qu'à la clôture du cycle ([preparerPartageCycle]/
+  /// [cloturerCycleEtOuvrirSuivant]), laissant le solde invisible et
+  /// intact entre la date limite et la clôture, parfois des mois plus
+  /// tard.
+  ///
+  /// Écrit une ligne [FondsSolidariteContributions] marquée
+  /// [estDeductionAutomatique] plutôt qu'un vrai versement — ce
+  /// distinguo est ce qui permet à [preparerPartageCycle] de continuer
+  /// à réduire les parts reconnues du membre exactement du même montant
+  /// que si rien n'avait encore été écrit (voir sa doc) : la ligne
+  /// automatique sert au solde affiché et à l'historique, jamais de
+  /// nouveau à la réduction elle-même (qui se base uniquement sur le
+  /// cash reçu, voir [_totalVerseCashCotisationExceptionnelle]) — sans
+  /// ce distinguo, la réduction serait sautée une fois la ligne écrite
+  /// (le solde retombant à 0), ce qui annulerait à tort la déduction au
+  /// moment du partage.
+  ///
+  /// **Idempotent** : s'appuie sur [soldeCotisationExceptionnelleFcfa]
+  /// (qui compte les lignes automatiques comme réglées), retombé à 0
+  /// une fois la déduction écrite — un appel répété (à chaque ouverture
+  /// d'écran) ne déduit donc jamais deux fois.
+  ///
+  /// Sans effet sur un cycle déjà clos.
+  Future<void> appliquerDeductionsCotisationsExceptionnellesEchues({
+    required String groupId,
+    required String cycleId,
+    required String agentPhone,
+  }) async {
+    final cycle = await (select(
+      cycles,
+    )..where((c) => c.id.equals(cycleId))).getSingle();
+    if (cycle.status != 'en_cours') return;
+
+    final maintenant = AppClock.now();
+    final evtsEchus = (await cotisationsExceptionnellesDuCycle(cycleId)).where(
+      (e) => !e.dateLimite.isAfter(maintenant),
+    );
+    if (evtsEchus.isEmpty) return;
+
+    final membres = await membresDuGroupe(groupId);
+    for (final evt in evtsEchus) {
+      for (final membre in membres) {
+        final solde = await soldeCotisationExceptionnelleFcfa(
+          evt: evt,
+          memberId: membre.id,
+        );
+        if (solde <= 0) continue;
+        await enregistrerContributionFondsSolidarite(
+          groupId: groupId,
+          cycleId: cycleId,
+          memberId: membre.id,
+          montantFcfa: solde,
+          motif: 'Cotisation exceptionnelle non payée à temps — déduite '
+              'automatiquement de l\'épargne à la date limite',
+          recordedByPhone: agentPhone,
+          cotisationExceptionnelleId: evt.id,
+          estDeductionAutomatique: true,
+        );
+      }
+    }
+  }
+
+  /// Total déjà versé en **cash réel** par ce membre pour cette
+  /// cotisation exceptionnelle — exclut toute ligne
+  /// [estDeductionAutomatique]. Base de la réduction des parts
+  /// reconnues au partage (voir [preparerPartageCycle]) : contrairement
+  /// à [soldeCotisationExceptionnelleFcfa] (qui sert à savoir si le
+  /// membre "doit encore quelque chose", et compte donc aussi les
+  /// déductions automatiques), cette réduction ne doit jamais dépendre
+  /// de si [appliquerDeductionsCotisationsExceptionnellesEchues] est
+  /// déjà passé ou non — sinon la même réduction serait tantôt
+  /// appliquée, tantôt sautée, selon un simple hasard de timing.
+  Future<int> _totalVerseCashCotisationExceptionnelle({
+    required String cotisationExceptionnelleId,
+    required String memberId,
+  }) async {
+    final rows =
+        await (select(fondsSolidariteContributions)..where(
+              (f) =>
+                  f.cotisationExceptionnelleId.equals(
+                    cotisationExceptionnelleId,
+                  ) &
+                  f.memberId.equals(memberId) &
+                  f.estDeductionAutomatique.equals(false),
+            ))
+            .get();
+    return rows.fold<int>(0, (sum, f) => sum + f.montantFcfa);
+  }
+
+  /// Total déjà déduit automatiquement (voir [estDeductionAutomatique])
+  /// pour ce membre sur cette cotisation exceptionnelle précise — sert à
+  /// ne jamais réécrire deux fois la même déduction à la clôture (voir
+  /// [cloturerCycleEtOuvrirSuivant]) si
+  /// [appliquerDeductionsCotisationsExceptionnellesEchues] est déjà
+  /// passé avant.
+  Future<int> _totalDejaDeduitAutomatiquement({
+    required String cotisationExceptionnelleId,
+    required String memberId,
+  }) async {
+    final rows =
+        await (select(fondsSolidariteContributions)..where(
+              (f) =>
+                  f.cotisationExceptionnelleId.equals(
+                    cotisationExceptionnelleId,
+                  ) &
+                  f.memberId.equals(memberId) &
+                  f.estDeductionAutomatique.equals(true),
+            ))
+            .get();
+    return rows.fold<int>(0, (sum, f) => sum + f.montantFcfa);
   }
 
   // ---------------------------------------------------------------------

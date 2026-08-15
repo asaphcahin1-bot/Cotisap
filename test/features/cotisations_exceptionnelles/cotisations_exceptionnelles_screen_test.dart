@@ -64,7 +64,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Aucune épargne exceptionnelle déclarée.'),
+      find.text('Aucune cotisation exceptionnelle déclarée.'),
       findsOneWidget,
     );
 

@@ -79,6 +79,14 @@ class _CotisationMembreScreenState
     final group = await (db.select(
       db.groups,
     )..where((g) => g.id.equals(widget.groupId))).getSingle();
+    // Déduction automatique du solde restant à la date limite — voir
+    // RETOURS_TERRAIN.md, point 25.4. Idempotent (voir la doc de la
+    // méthode), donc sûr de rappeler à chaque ouverture de l'écran.
+    await db.appliquerDeductionsCotisationsExceptionnellesEchues(
+      groupId: widget.groupId,
+      cycleId: widget.cycleId,
+      agentPhone: ref.read(currentPhoneNumberProvider) ?? 'inconnu',
+    );
     final journeeOuverte = await db.journeeCotisationEnAttente(
       groupId: widget.groupId,
       cycleId: widget.cycleId,
@@ -223,7 +231,14 @@ class _CotisationMembreScreenState
     _reload();
   }
 
+  /// Passage au membre suivant, rendu explicite — voir RETOURS_TERRAIN.md,
+  /// point 25.1 : l'agent pouvait changer de membre sans s'en rendre
+  /// compte, le seul signal étant le nom en haut de page. Un SnackBar
+  /// nommant explicitement l'ancien et le nouveau membre s'ajoute
+  /// désormais à la carte d'en-tête bien plus visible (voir la carte nom
+  /// / carnet / parts dans `build`).
   Future<void> _enregistrerEtPasserAuSuivant() async {
+    final nomActuel = _membre.fullName;
     setState(() => _busy = true);
     final ok = await _enregistrerCotisationSiSaisie();
     if (mounted) setState(() => _busy = false);
@@ -231,6 +246,16 @@ class _CotisationMembreScreenState
     if (_index + 1 < widget.membres.length) {
       setState(() => _index++);
       _reload();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '✓ $nomActuel enregistré — passage à ${_membre.fullName}',
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } else {
       Navigator.of(context).pop();
     }
@@ -445,7 +470,7 @@ class _CotisationMembreScreenState
         : await showDialog<({CotisationsExceptionnelle evt, int solde})>(
             context: context,
             builder: (context) => SimpleDialog(
-              title: const Text('Quelle épargne exceptionnelle régler ?'),
+              title: const Text('Quelle cotisation exceptionnelle régler ?'),
               children: [
                 for (final r in data.exceptionnellesNonSoldees)
                   SimpleDialogOption(
@@ -638,25 +663,63 @@ class _CotisationMembreScreenState
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                _membre.fullName,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              if (nombreCarnets > 0)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Wrap(
-                    spacing: 8,
+              // Nom, carnet, parts déjà achetées aujourd'hui : les 3 infos
+              // les plus importantes de l'écran pour l'agent sur le
+              // terrain (voir RETOURS_TERRAIN.md, point 25.2) — mises en
+              // avant dans une carte à fort contraste plutôt que du texte
+              // discret, pour qu'elles sautent aux yeux immédiatement.
+              Card(
+                elevation: 2,
+                color: Theme.of(context).colorScheme.primaryContainer,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      for (var n = 1; n <= nombreCarnets; n++)
-                        Chip(
-                          label: Text(
-                            data.numerosSerie[n] ?? 'Carnet $n',
-                          ),
+                      Text(
+                        _membre.fullName,
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      if (nombreCarnets > 0) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            const Icon(Icons.badge_outlined, size: 22),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Carnet ${data.numerosSerie[1] ?? '1'}',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ],
                         ),
+                        if (data.journeeOuverte != null) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.shopping_bag_outlined,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Parts achetées aujourd\'hui : '
+                                '${data.dejaAjoutees[1] ?? 0}',
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ],
                   ),
                 ),
+              ),
               const SizedBox(height: 16),
 
               Text('1. Épargne', style: Theme.of(context).textTheme.titleMedium),
@@ -748,7 +811,7 @@ class _CotisationMembreScreenState
                         : () => _payerCotisationExceptionnelle(data),
                     icon: const Icon(Icons.event_outlined, size: 18),
                     label: const Text(
-                      'Épargne except.',
+                      'Cotis. except.',
                       style: TextStyle(fontSize: 12),
                     ),
                   ),

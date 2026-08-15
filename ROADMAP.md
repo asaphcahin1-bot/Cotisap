@@ -321,3 +321,12 @@ combler avant de brancher la synchronisation réelle**, pas avant.
   "fiche membre consolidée") supprimé, `members_screen.dart` ouvre
   désormais `CotisationMembreScreen` comme le reste de l'app (voir
   DECISIONS.md, "Fusion des écrans membre").
+- Bug "prêt validé hors fenêtre → cotisation bloquée" signalé le
+  2026-08-13 (RETOURS_TERRAIN.md, point 25.7), investigué mais **non
+  reproduit** — aucun lien trouvé entre les prêts et le registre des
+  échéances de cotisation. Hypothèse la plus probable : le symptôme
+  vécu correspond au bug déjà corrigé au point 24.2, rencontré plus tôt
+  pendant les 3 mois de test terrain, sur une version antérieure de
+  l'app. À reconfirmer avec le fondateur si le symptôme revient sur
+  l'APK corrigé — pas de piste supplémentaire à explorer pour l'instant
+  sans plus de détail.

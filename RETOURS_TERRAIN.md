@@ -699,3 +699,58 @@ réunion suivante exactement comme une clôture manuelle ratée). **Livré**
 déjà résolu". Le lien avec les prêts mentionné par le fondateur n'a
 pas révélé de bug distinct — les prêts restent entièrement séparés du
 registre des échéances de cotisation.
+
+## 25. Retours après un nouveau test terrain, même jour (2026-08-13)
+
+**25.1 — Passage au membre suivant trop discret.** L'agent pouvait
+changer de membre sans s'en rendre compte. **Livré** : carte nom /
+carnet / parts en tête d'écran (fort contraste) + SnackBar explicite
+au changement de membre. Voir DECISIONS.md, "Écran Cotisation : membre
+suivant plus visible".
+
+**25.2 — Nom, numéro de carnet, parts achetées : les plus importantes
+de la page.** Même livraison que 25.1 ci-dessus — regroupés dans la
+même carte mise en avant.
+
+**25.3 — "Épargne exceptionnelle" redevient "Cotisation
+exceptionnelle".** Seul ce terme précis du renommage "Cotisation" →
+"Épargne" est annulé, à l'écran uniquement. **Livré** — voir
+DECISIONS.md, "Renommage partiel annulé".
+
+**25.4 — Déduction automatique immédiate à la date limite.** Avant
+cette décision, une cotisation exceptionnelle impayée passée sa date
+limite ne réduisait les parts reconnues du membre qu'au moment du
+partage de fin de cycle — invisible et sans trace entre-temps.
+Question posée explicitement au fondateur (immédiat vs. à la
+clôture, comme pour les amendes) : il a choisi l'immédiat. **Livré**,
+après avoir corrigé en cours de route un vrai risque de double compte
+détecté par les tests (voir DECISIONS.md, "Déduction automatique
+immédiate d'une cotisation exceptionnelle échue", pour le détail
+technique complet — nouvelle colonne `estDeductionAutomatique`
+distinguant une ligne automatique d'un vrai versement cash).
+
+**25.5 — Suppression d'"Annuler la clôture".** Plus aucune possibilité
+de revenir sur une journée déjà clôturée. **Livré** — voir
+DECISIONS.md.
+
+**25.6 — Dates de début/fin de cycle affichées.** Informations
+générales déjà choisies à la création du groupe, mais nulle part
+affichées. **Livré** sur l'écran Répartition — voir DECISIONS.md.
+
+**25.7 — Bug "prêt validé hors fenêtre → cotisation bloquée",
+investigué, non reproduit.** Le fondateur a signalé qu'après avoir
+validé un prêt à une date où la fenêtre de crédit n'était pas censée
+être ouverte, l'écran Cotisation a cessé d'afficher toute journée pour
+continuer à cotiser — même symptôme que le bug corrigé au point 24.2.
+Investigation : la confirmation d'un prêt (`confirmerPret`) n'a jamais
+été bloquée par la fenêtre de crédit (seule la demande initiale l'est
+— confirmer un peu après la fenêtre est le comportement normal, pas
+un bug) ; aucun mécanisme de prêt n'écrit dans `Echeances`, la table
+au cœur du bug du point 24.2. Un test dédié
+(`test/data/local/pret_independant_cotisation_test.dart`) confirme
+cette indépendance et n'a rien reproduit. Explication la plus
+probable : ce que le fondateur a vécu correspond au bug du point 24.2
+(déjà corrigé), rencontré à un moment antérieur de ses 3 mois de
+test — le prêt était probablement une coïncidence de timing, pas la
+cause. À confirmer avec le fondateur si le symptôme revient sur
+l'APK corrigé.

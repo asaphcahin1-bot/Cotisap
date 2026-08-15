@@ -42,6 +42,13 @@ class _CycleSummaryScreenState extends ConsumerState<CycleSummaryScreen> {
     final cycle = await (db.select(
       db.cycles,
     )..where((c) => c.id.equals(widget.cycleId))).getSingle();
+    final groupe = await (db.select(
+      db.groups,
+    )..where((g) => g.id.equals(widget.groupId))).getSingle();
+    // Voir RETOURS_TERRAIN.md, point 25.6 : dates de début et de fin
+    // prévue du cycle, telles que choisies à la création du groupe —
+    // pour que l'agent vérifie que ces choix sont bien respectés.
+    final finPrevue = db.finDeCyclePrevue(cycle, groupe);
     final membres = await db.membresDuGroupe(widget.groupId);
     final cotisations = await db.cotisationsDuCycle(widget.cycleId);
     final totalFonds = await db.totalFondsSolidarite(widget.groupId);
@@ -157,6 +164,7 @@ class _CycleSummaryScreenState extends ConsumerState<CycleSummaryScreen> {
 
     return _SummaryData(
       cycle: cycle,
+      finPrevue: finPrevue,
       membres: membres,
       resultatEnCours: resultatEnCours,
       resultatsClotures: resultatsClotures,
@@ -474,6 +482,47 @@ class _CycleSummaryScreenState extends ConsumerState<CycleSummaryScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              // Dates de début et de fin prévue du cycle — voir
+              // RETOURS_TERRAIN.md, point 25.6 : informations générales
+              // choisies à la création du groupe, affichées ici pour que
+              // l'agent puisse vérifier qu'elles sont bien respectées.
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Cycle n°${data.cycle.cycleNumber}'
+                              '${data.cycle.status == 'en_cours' ? ' (en cours)' : ' (clos)'}',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Début : ${data.cycle.startedAt.day}/'
+                              '${data.cycle.startedAt.month}/'
+                              '${data.cycle.startedAt.year}',
+                            ),
+                            Text(
+                              'Fin prévue : ${data.finPrevue.day}/'
+                              '${data.finPrevue.month}/'
+                              '${data.finPrevue.year}',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               if (resultats == null)
                 Text(
                   data.erreur ??
@@ -773,6 +822,10 @@ class _CycleSummaryScreenState extends ConsumerState<CycleSummaryScreen> {
 
 class _SummaryData {
   final Cycle cycle;
+
+  /// Date de fin prévue du cycle, calculée depuis la durée choisie à la
+  /// création du groupe (voir RETOURS_TERRAIN.md, point 25.6).
+  final DateTime finPrevue;
   final List<Member> membres;
 
   /// Non nul seulement pour un cycle `en_cours` — inclut la caisse
@@ -810,6 +863,7 @@ class _SummaryData {
 
   const _SummaryData({
     required this.cycle,
+    required this.finPrevue,
     required this.membres,
     required this.resultatEnCours,
     required this.resultatsClotures,

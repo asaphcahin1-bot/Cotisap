@@ -1,5 +1,79 @@
 # Changelog — CotisApp
 
+## 2026-08-14 — Clôture bloquée par un doublon préexistant, amendes sans défaut
+
+Nouveau retour terrain : la clôture restait bloquée sur un APK déjà
+censé contenir le correctif du 2026-08-13 (voir DECISIONS.md,
+"Correction de motifsSystemeApplicables — carnet déjà résolu"). Ce
+correctif protégeait l'écriture mais pas la lecture — voir DECISIONS.md
+pour le détail complet des deux entrées ci-dessous.
+
+**Corrigé**
+- `_derniereEcheancePourCarnet` (nouveau helper, `orderBy(desc) +
+  limit(1)`) remplace 3 requêtes `getSingleOrNull` fragiles
+  (`membresAbsentsPourDate`, `carnetsATraiterPourDate`,
+  `cloturerJourneeCotisation`) — ne plante plus, même si une ligne
+  `Echeances` en double existe déjà pour un triplet (membre, carnet,
+  date), écrite avant le correctif du 13 août. Aucune migration, aucune
+  suppression de donnée.
+
+**Changé**
+- Écran Cotisation, dialogue de clôture : plus aucun motif
+  pré-sélectionné par défaut sur "Absence" — l'agent doit choisir
+  activement un motif pour chaque carnet non traité, "Clôturer
+  définitivement" reste désactivé tant qu'il en manque un. Un carnet
+  déjà anticipé (écran "Séance du jour") reste pré-rempli, puisque déjà
+  un choix explicite de l'agent.
+
+**Ajouté (tests)**
+- `test/data/local/echeance_dupliquee_deja_existante_test.dart` (4
+  tests) — simule directement une ligne en double pour reproduire une
+  base de terrain non corrigée, vérifié contre l'ancien code avant
+  correction (échoue bien avec `Bad state: Too many elements`)
+- 2 tests existants adaptés au nouveau dialogue de clôture (plus de
+  motif "Absence" trouvable par défaut, bouton désactivé tant que rien
+  n'est choisi)
+- 305 tests au total dans le projet après cette série
+
+## 2026-08-13 (suite 2) — Visibilité écran Cotisation, déduction immédiate, nettoyage clôture
+
+Sixième vague de retours, même jour (voir RETOURS_TERRAIN.md, point
+25).
+
+**Ajouté**
+- Carte nom / carnet / parts déjà achetées aujourd'hui, en fort
+  contraste, en tête de l'écran Cotisation — plus un SnackBar explicite
+  au passage au membre suivant (ex. "✓ Aya Kone enregistré — passage à
+  Seydou Traore")
+- Dates de début et de fin prévue du cycle affichées sur l'écran
+  Répartition (`AppDatabase.finDeCyclePrevue`, calcul déjà existant
+  rendu public plutôt que dupliqué)
+- `AppDatabase.appliquerDeductionsCotisationsExceptionnellesEchues` :
+  le solde restant d'une cotisation exceptionnelle est désormais déduit
+  automatiquement de l'épargne du membre **dès que la date limite
+  passe**, plutôt qu'attendre la clôture du cycle — nouvelle colonne
+  `FondsSolidariteContributions.estDeductionAutomatique` (schemaVersion
+  22) pour distinguer une ligne automatique d'un vrai versement cash,
+  condition nécessaire pour éviter un double compte à la clôture (voir
+  DECISIONS.md pour le détail)
+- `test/data/local/pret_independant_cotisation_test.dart` : confirme
+  qu'aucune opération de prêt n'affecte la détection de la journée de
+  cotisation (investigation du point 25.7, non reproduit)
+
+**Changé**
+- "Épargne exceptionnelle" redevient "Cotisation exceptionnelle" à
+  l'écran — seul ce terme du renommage Cotisation→Épargne est annulé
+- Message de confirmation avant clôture de journée renforcé
+  ("il ne sera plus possible de revenir en arrière")
+
+**Supprimé**
+- "Annuler la clôture" retiré entièrement (bouton, méthode
+  `annulerClotureJournee`, tests dédiés) — une journée clôturée est
+  désormais définitive, sans exception
+
+**Ajouté (tests)**
+- 301 tests au total dans le projet après cette série
+
 ## 2026-08-13 (suite) — Fusion des écrans membre + correctif clôture bloquée
 
 Cinquième vague de retours, même jour (voir RETOURS_TERRAIN.md, point

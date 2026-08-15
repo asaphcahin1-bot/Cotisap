@@ -164,7 +164,7 @@ void main() {
   }
 
   testWidgets(
-      'clôturer avec un carnet non traité applique le motif "Absence" par défaut',
+      'clôturer avec un carnet non traité exige un motif choisi activement, aucun défaut',
       (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
@@ -193,7 +193,29 @@ void main() {
 
     expect(find.textContaining('carnet(s) sans rien d\'enregistré'), findsOneWidget);
     expect(find.textContaining('Seydou Traore'), findsOneWidget);
-    expect(find.text('Absence'), findsOneWidget);
+    // Aucun motif pré-sélectionné (révision du 2026-08-14 — voir
+    // DECISIONS.md, "Clôture de journée interactive" : plus de repli
+    // automatique sur "Absence", jamais d'amende sans choix actif de
+    // l'agent) : le dropdown affiche l'indice, pas un motif déjà choisi.
+    expect(find.text('Absence'), findsNothing);
+    expect(find.text('Choisir…'), findsOneWidget);
+
+    // Le bouton reste désactivé tant qu'aucun motif n'est choisi.
+    var bouton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Clôturer définitivement'));
+    expect(bouton.onPressed, isNull);
+    expect(find.textContaining('Choisissez un motif'), findsOneWidget);
+
+    // L'agent choisit explicitement "Absence" — un vrai geste, pas un
+    // défaut qu'il aurait juste laissé passer.
+    await tester.tap(find.byType(DropdownButton<String>).last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Absence').last);
+    await tester.pumpAndSettle();
+
+    bouton = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Clôturer définitivement'));
+    expect(bouton.onPressed, isNotNull);
 
     await tester.tap(find.text('Clôturer définitivement'));
     await tester.pumpAndSettle();
@@ -207,7 +229,7 @@ void main() {
   });
 
   testWidgets(
-      'clôturer permet de changer le motif proposé avant de valider',
+      'clôturer permet de choisir "Payé par un tiers" pour un carnet non traité',
       (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
@@ -229,7 +251,7 @@ void main() {
     await tester.tap(find.text('Clôturer cette journée'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(DropdownButton<String>, 'Absence'));
+    await tester.tap(find.byType(DropdownButton<String>).last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Payé par un tiers').last);
     await tester.pumpAndSettle();

@@ -235,6 +235,14 @@ void main() {
         montantFcfa: 200,
       );
 
+      // Fenêtre agrandie : la carte des dates de début/fin de cycle
+      // pousse le bouton "Ajouter une amende" plus bas (voir
+      // RETOURS_TERRAIN.md, point 25.6).
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       await tester.pumpWidget(
         ProviderScope(
           overrides: [databaseProvider.overrideWithValue(db)],
