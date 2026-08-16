@@ -2733,3 +2733,30 @@ déduit automatiquement (déjà suivis séparément, voir
 devient un `ExpansionTile` : un bandeau explicite "Cette cotisation
 exceptionnelle a expiré..." si la date limite est dépassée, puis la
 liste des membres avec leur statut et montant.
+
+## Historique de prêt enrichi pour l'agent et le membre (2026-08-16)
+
+**Retour terrain** : un membre a demandé à voir son historique de
+prêt. Vérification faite avant tout code : l'écran membre affichait
+déjà une section "Mes prêts", mais très pauvre comparée à ce que
+l'agent voit pour le même prêt — montant emprunté, statut et total
+remboursé seulement, jamais le taux d'intérêt, le montant dû
+actuellement, le statut "au rouge", l'échéance, ni le détail des
+remboursements un par un (cette dernière liste manquait aussi côté
+agent).
+
+**Décision** : aligner l'écran membre sur l'écran agent (lecture
+seule, aucune action nouvelle — cohérent avec `two-tier-access-model`),
+et ajouter le détail des remboursements aux deux écrans.
+
+**Implémentation** :
+- Les deux écrans utilisent désormais `AppDatabase.soldePret` (déjà la
+  source unique pour ce calcul, voir sa doc) — jamais de calcul
+  dupliqué, le membre voit exactement le même solde que l'agent.
+- `AppDatabase.remboursementsDuPret` (déjà existant, utilisé en
+  interne par `soldePret`) est maintenant aussi lu directement par les
+  deux écrans pour afficher la liste des remboursements.
+- Chaque prêt devient un `ExpansionTile` (au lieu d'un `ListTile`
+  simple) sur les deux écrans : résumé toujours visible (montant, taux,
+  dû actuellement, "au rouge" le cas échéant, échéance), historique des
+  remboursements (date, montant) affiché au dépliage.

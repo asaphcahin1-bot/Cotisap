@@ -661,4 +661,64 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    'déplier un prêt affiche l\'historique des remboursements un par un',
+    (tester) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final ctx = await preparer(db);
+
+      final resultat = await db.enregistrerPret(
+        groupId: ctx.groupId,
+        cycleId: ctx.cycleId,
+        memberId: ctx.membreId,
+        principalFcfa: 10000,
+        interestRatePercent: 10,
+        initiatedByPhone: '+2250000099',
+        confirmationCode: '1234',
+        provenance: 'importe',
+      );
+      await db.confirmerPret(
+        pretId: resultat.pretId,
+        codeSaisi: '1234',
+        confirmedByPhone: '+2250000001',
+      );
+      await db.enregistrerRemboursement(
+        pretId: resultat.pretId,
+        montantFcfa: 3000,
+        recordedByPhone: '+2250000099',
+        recordedAt: DateTime(2024, 2, 1),
+      );
+      await db.enregistrerRemboursement(
+        pretId: resultat.pretId,
+        montantFcfa: 2000,
+        recordedByPhone: '+2250000099',
+        recordedAt: DateTime(2024, 2, 15),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            currentPhoneNumberProvider.overrideWith((ref) => '+2250000099'),
+          ],
+          child: MaterialApp(
+            home: LoansScreen(groupId: ctx.groupId, cycleId: ctx.cycleId),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Fermé par défaut : l'historique n'est pas encore visible.
+      expect(find.text('Remboursements'), findsNothing);
+
+      await tester.tap(find.text('Aya Kone — emprunté ${formatFcfa(10000)}'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Remboursements'), findsOneWidget);
+      expect(find.textContaining(formatFcfa(3000)), findsOneWidget);
+      expect(find.textContaining(formatFcfa(2000)), findsOneWidget);
+    },
+  );
 }

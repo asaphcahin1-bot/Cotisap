@@ -1,5 +1,25 @@
 # Changelog — CotisApp
 
+## 2026-08-16 — Historique de prêt enrichi (agent + membre)
+
+Retour terrain : un membre a demandé à voir son historique de prêt.
+Vérification faite avant tout code (voir DECISIONS.md) : l'écran
+membre existait déjà mais était nettement plus pauvre que l'écran
+agent pour le même prêt.
+
+**Ajouté**
+- Écran membre ("Mes prêts") : taux d'intérêt, montant dû actuellement,
+  statut "au rouge", prochaine échéance — même source que l'écran
+  agent (`AppDatabase.soldePret`), jamais un calcul dupliqué
+- Écrans agent et membre : chaque prêt devient dépliable, avec le
+  détail des remboursements un par un (date, montant) — absent des
+  deux écrans jusqu'ici, malgré la donnée déjà en base
+
+**Ajouté (tests)**
+- 2 nouveaux tests (historique dépliable côté agent et côté membre)
+- 311 tests au total dans le projet — `flutter analyze` : aucun
+  problème
+
 ## 2026-08-15 — Échéances décalées par l'heure d'été, date de la prochaine réunion, détail cotisation exceptionnelle
 
 Nouveau retour terrain après plusieurs semaines de simulation : des

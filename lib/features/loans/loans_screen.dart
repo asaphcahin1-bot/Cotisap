@@ -59,6 +59,7 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
     final prets = await db.pretsDuCycle(widget.cycleId);
     final statuts = <String, bool>{};
     final soldes = <String, LoanBalanceResult>{};
+    final remboursements = <String, List<PretRemboursement>>{};
     for (final pret in prets) {
       final confirme = await db.pretEstConfirme(pret.id);
       statuts[pret.id] = confirme;
@@ -70,6 +71,7 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
         // en cours.
         soldes[pret.id] = await db.soldePret(pret, maintenant: AppClock.now());
       }
+      remboursements[pret.id] = await db.remboursementsDuPret(pret.id);
     }
     // Fenêtre de crédit + caisse disponible (voir DECISIONS.md,
     // "Fenêtres de crédit selon la fréquence de réunion" et
@@ -110,6 +112,7 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
       prets: prets,
       confirmes: statuts,
       soldes: soldes,
+      remboursements: remboursements,
       fenetreOuverte: fenetreOuverte,
       reunionsAvantProchaineFenetre: reunionsAvant,
       caisseDisponibleFcfa: caisseDisponible,
@@ -896,7 +899,8 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
                     '${libelleCarnet.isEmpty ? '' : ' ($libelleCarnet)'}',
                 if (pret.estApproximatif) 'approximatif',
               ].join(' · ');
-              return ListTile(
+              final rembs = data.remboursements[pret.id] ?? const [];
+              return ExpansionTile(
                 leading: Icon(
                   confirme ? Icons.check_circle : Icons.hourglass_top,
                   color: confirme ? Colors.green : Colors.orange,
@@ -953,7 +957,6 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
                     ],
                   ],
                 ),
-                isThreeLine: solde != null,
                 trailing: confirme
                     ? (solde != null && solde.montantDuFcfa == 0
                           ? null // soldé — plus rien à rembourser
@@ -982,6 +985,40 @@ class _LoansScreenState extends ConsumerState<LoansScreen> {
                         },
                         child: const Text('Confirmer'),
                       ),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Remboursements',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: 4),
+                        if (rembs.isEmpty)
+                          const Text(
+                            'Aucun remboursement enregistré pour ce prêt.',
+                            style: TextStyle(fontStyle: FontStyle.italic),
+                          )
+                        else
+                          ...rembs.map(
+                            (r) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(formatDateFr(r.recordedAt)),
+                                  ),
+                                  Text(formatFcfa(r.montantFcfa)),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               );
                             },
                       ),
@@ -1015,6 +1052,7 @@ class _LoansData {
   final List<Pret> prets;
   final Map<String, bool> confirmes;
   final Map<String, LoanBalanceResult> soldes;
+  final Map<String, List<PretRemboursement>> remboursements;
   final bool fenetreOuverte;
   final int reunionsAvantProchaineFenetre;
   final int caisseDisponibleFcfa;
@@ -1027,6 +1065,7 @@ class _LoansData {
     required this.prets,
     required this.confirmes,
     required this.soldes,
+    required this.remboursements,
     required this.fenetreOuverte,
     required this.reunionsAvantProchaineFenetre,
     required this.caisseDisponibleFcfa,

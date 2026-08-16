@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/app_clock.dart';
 import '../../core/formatting.dart';
 import '../../data/local/database.dart';
 import '../../domain/calculators/end_of_cycle_calculator.dart';
+import '../../domain/calculators/loan_balance_calculator.dart';
 import '../../state/providers.dart';
 
 /// Écran "membre" en lecture seule (skill two-tier-access-model).
@@ -66,6 +68,8 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
         pretsMembre: const [],
         pretsConfirmes: const {},
         pretsRembourses: const {},
+        pretsSoldes: const {},
+        pretsHistorique: const {},
         resultatMembre: null,
         autresCycles: tousLesCycles,
       );
@@ -78,9 +82,22 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
     final pretsMembre = await db.pretsDuMembre(widget.memberId, cycle.id);
     final pretsConfirmes = <String, bool>{};
     final pretsRembourses = <String, int>{};
+    final pretsSoldes = <String, LoanBalanceResult>{};
+    final pretsHistorique = <String, List<PretRemboursement>>{};
     for (final pret in pretsMembre) {
-      pretsConfirmes[pret.id] = await db.pretEstConfirme(pret.id);
+      final confirme = await db.pretEstConfirme(pret.id);
+      pretsConfirmes[pret.id] = confirme;
       pretsRembourses[pret.id] = await db.totalRembourse(pret.id);
+      pretsHistorique[pret.id] = await db.remboursementsDuPret(pret.id);
+      if (confirme) {
+        // Même source que l'écran agent (voir DECISIONS.md, "Dette de
+        // prêt au rouge") — jamais un calcul dupliqué inline, pour que
+        // le membre voie exactement le même solde que l'agent.
+        pretsSoldes[pret.id] = await db.soldePret(
+          pret,
+          maintenant: AppClock.now(),
+        );
+      }
     }
 
     // Le calcul de fin de cycle a besoin des parts de tout le groupe —
@@ -141,6 +158,8 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
       pretsMembre: pretsMembre,
       pretsConfirmes: pretsConfirmes,
       pretsRembourses: pretsRembourses,
+      pretsSoldes: pretsSoldes,
+      pretsHistorique: pretsHistorique,
       resultatMembre: resultatMembre,
       autresCycles: tousLesCycles.where((c) => c.id != cycle.id).toList(),
     );
@@ -226,13 +245,88 @@ class _MemberHomeScreenState extends ConsumerState<MemberHomeScreen> {
                   ...data.pretsMembre.map((pret) {
                     final confirme = data.pretsConfirmes[pret.id] ?? false;
                     final rembourse = data.pretsRembourses[pret.id] ?? 0;
+                    final solde = data.pretsSoldes[pret.id];
+                    final historique = data.pretsHistorique[pret.id] ?? const [];
                     return Card(
-                      child: ListTile(
+                      child: ExpansionTile(
                         title: Text(formatFcfa(pret.principalFcfa)),
-                        subtitle: Text(
-                          '${confirme ? "Confirmé" : "En attente de confirmation"} · '
-                          'remboursé : ${formatFcfa(rembourse)}',
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${pret.provenance == 'importe'
+                                  ? 'Importé'
+                                  : (confirme ? 'Confirmé' : 'En attente de confirmation')} · '
+                              'intérêt ${formatPercent(pret.interestRatePercent)} · '
+                              'remboursé : ${formatFcfa(rembourse)}',
+                            ),
+                            if (solde != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                solde.montantDuFcfa > 0
+                                    ? 'Je dois encore : ${formatFcfa(solde.montantDuFcfa)}'
+                                    : 'Soldé',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: solde.montantDuFcfa > 0
+                                      ? Theme.of(context).colorScheme.error
+                                      : Colors.green,
+                                ),
+                              ),
+                              if (solde.estAuRouge)
+                                Text(
+                                  'AU ROUGE — intérêt à 10 %/mois depuis le '
+                                  '${formatFcfa(solde.soldeAuDebutDuRougeFcfa ?? 0)} de départ',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                              if (solde.montantDuFcfa > 0 &&
+                                  solde.joursRestantsPeriodeCourante != null)
+                                Text(
+                                  solde.joursRestantsPeriodeCourante! >= 0
+                                      ? 'Prochaine échéance dans ${solde.joursRestantsPeriodeCourante} jour(s)'
+                                      : 'Échéance dépassée de ${-solde.joursRestantsPeriodeCourante!} jour(s)',
+                                  style: const TextStyle(fontStyle: FontStyle.italic),
+                                ),
+                            ],
+                          ],
                         ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Mes remboursements',
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                                const SizedBox(height: 4),
+                                if (historique.isEmpty)
+                                  const Text(
+                                    'Aucun remboursement enregistré pour ce prêt.',
+                                    style: TextStyle(fontStyle: FontStyle.italic),
+                                  )
+                                else
+                                  ...historique.map(
+                                    (r) => Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(formatDateFr(r.recordedAt)),
+                                          ),
+                                          Text(formatFcfa(r.montantFcfa)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   }),
@@ -280,6 +374,8 @@ class _MemberViewData {
   final List<Pret> pretsMembre;
   final Map<String, bool> pretsConfirmes;
   final Map<String, int> pretsRembourses;
+  final Map<String, LoanBalanceResult> pretsSoldes;
+  final Map<String, List<PretRemboursement>> pretsHistorique;
   final MemberCycleResult? resultatMembre;
   final List<Cycle> autresCycles;
 
@@ -291,6 +387,8 @@ class _MemberViewData {
     required this.pretsMembre,
     required this.pretsConfirmes,
     required this.pretsRembourses,
+    required this.pretsSoldes,
+    required this.pretsHistorique,
     required this.resultatMembre,
     required this.autresCycles,
   });
