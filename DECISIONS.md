@@ -2816,3 +2816,40 @@ rejoué).
 in (1, 2)` (0004) avec la nouvelle règle "un membre = un seul carnet"
 (drift, commentaire de classe) — laissé tel quel pour garder ce
 correctif purement additif ; à traiter séparément si besoin.
+
+## Identité visuelle (couleurs, icône, écran d'identification) (2026-08-16)
+
+**Décision, après plusieurs itérations sur le logo avec le fondateur** :
+le logo final retenu (silhouettes formant un cercle + carnet + coche,
+généré via Canva) sert désormais de base à l'identité visuelle de
+l'app elle-même — jusqu'ici, l'app n'avait aucune couleur ni icône
+propre à CotisApp (thème Material 3 par défaut sur une couleur bleu
+marine sans rapport, icône de lancement encore celle de Flutter).
+
+**Couleurs, échantillonnées directement sur les pixels du fichier**
+(pas estimées à l'œil) : vert `#40C256`, orange `#F39916`, bleu-marine
+foncé `#1F5156`. Appliquées via `ColorScheme.fromSeed(seedColor:
+vert, secondary: orange, tertiary: bleu-marine)` — le vert sert de
+base pour que Material 3 calcule une palette complète aux contrastes
+accessibles, l'orange et le bleu-marine sont injectés aux rôles
+secondaire/tertiaire plutôt que tout redéfinir à la main.
+
+**Icône de l'app** : le fichier logo fourni avait ~80% de marge
+blanche autour du contenu réel (bounding box mesurée : 392×388px sur
+un canevas de 2000×2000) — inutilisable tel quel comme source d'icône
+(aurait donné un minuscule logo perdu dans un carré blanc). Recadré à
+560×560 centré sur le contenu (`assets/branding/logo_icon.png`), puis
+généré via `flutter_launcher_icons` (Android uniquement pour
+l'instant, iOS hors périmètre) plutôt qu'un redimensionnement manuel
+par densité.
+
+**Écran d'identification** : le logo (icône seule) ajouté au-dessus du
+texte "CotisApp" — texte gardé en vrai texte (pas incrusté dans
+l'image), pour rester lisible/accessible et cohérent avec le thème.
+
+**Écarté pour cette passe** : redessiner les autres écrans un par un
+(cotisations, prêts, amendes...) — restent sur les composants Material
+standards, qui héritent automatiquement des nouvelles couleurs via le
+thème global, sans qu'il soit nécessaire de retoucher chaque écran.
+Un chantier plus large pourra être repris séparément si besoin, une
+fois l'usage terrain plus avancé.

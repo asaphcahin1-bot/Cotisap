@@ -26,6 +26,15 @@ void main() async {
   runApp(const ProviderScope(child: CotisAppRoot()));
 }
 
+/// Couleurs de marque — extraites directement des pixels du logo retenu
+/// (voir DECISIONS.md, "Identité visuelle") : vert (personnage principal
+/// + "Cotis"), orange (accent), bleu-marine foncé ("App" + texte fort).
+class _BrandColors {
+  static const green = Color(0xFF40C256);
+  static const orange = Color(0xFFF39916);
+  static const darkTeal = Color(0xFF1F5156);
+}
+
 class CotisAppRoot extends StatelessWidget {
   const CotisAppRoot({super.key});
 
@@ -36,7 +45,15 @@ class CotisAppRoot extends StatelessWidget {
       locale: const Locale('fr', 'FR'),
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF33456E)),
+        // Palette générée depuis le vert (garantit des contrastes
+        // accessibles), puis l'orange et le bleu-marine du logo injectés
+        // comme secondaire/tertiaire plutôt que de tout redéfinir à la
+        // main — évite de casser la lisibilité calculée par Material 3.
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: _BrandColors.green,
+          secondary: _BrandColors.orange,
+          tertiary: _BrandColors.darkTeal,
+        ),
       ),
       home: const _IdentificationGate(),
     );
@@ -94,9 +111,21 @@ class _PhoneEntryScreenState extends ConsumerState<_PhoneEntryScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('CotisApp', style: Theme.of(context).textTheme.headlineMedium),
+                Center(
+                  child: Image.asset(
+                    'assets/branding/logo_icon.png',
+                    height: 96,
+                    width: 96,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'CotisApp',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
                 const SizedBox(height: 8),
-                const Text('Gestion des AVEC'),
+                const Text('Gestion des AVEC', textAlign: TextAlign.center),
                 const SizedBox(height: 32),
                 TextField(
                   controller: _controller,

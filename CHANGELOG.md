@@ -1,5 +1,25 @@
 # Changelog — CotisApp
 
+## 2026-08-16 (suite 2) — Identité visuelle : couleurs, icône, écran d'identification
+
+Après plusieurs itérations sur le logo (Canva), première passe design
+sur l'app elle-même — jusqu'ici 100% Material 3 par défaut, aucune
+couleur ni icône propre à CotisApp.
+
+**Ajouté**
+- Thème de couleurs de marque (`ColorScheme.fromSeed`), couleurs
+  échantillonnées directement sur les pixels du logo : vert `#40C256`,
+  orange `#F39916`, bleu-marine `#1F5156`
+- Icône de l'app remplacée (`flutter_launcher_icons`), à partir d'une
+  version recadrée du logo (`assets/branding/logo_icon.png`) — le
+  fichier fourni avait ~80% de marge blanche inutilisable telle quelle
+- Logo ajouté sur l'écran d'identification, au-dessus du texte
+  "CotisApp"
+
+**Non touché volontairement** : les autres écrans restent sur les
+composants Material standards — héritent des nouvelles couleurs via le
+thème global, sans passage écran par écran pour cette itération.
+
 ## 2026-08-16 (suite) — Rattrapage du miroir Postgres (Phases 2 à 5)
 
 Préparation en vue de l'authentification réelle (Twilio) et de la
