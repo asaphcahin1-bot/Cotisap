@@ -132,4 +132,46 @@ void main() {
       expect(calc.estUnMontantValide(montantFcfa: 0, valeurPartFcfa: 500), isFalse);
     });
   });
+
+  group('changement d\'heure (DST) — retour terrain du 2026-08-15', () {
+    test(
+        'ajouterJoursCalendaires traverse le passage à l\'heure d\'hiver '
+        'sans changer de jour de semaine', () {
+      // Dimanche 1er novembre 2026 : passage à l'heure d'hiver aux
+      // États-Unis (et dans tout fuseau qui observe le même
+      // changement). DateTime.add(Duration(days: 7)) atterrirait une
+      // heure avant minuit — donc la veille — sur cette machine.
+      final vendredi30octobre = DateTime(2026, 10, 30);
+      final resultat = ajouterJoursCalendaires(vendredi30octobre, 7);
+      expect(resultat, DateTime(2026, 11, 6));
+      expect(resultat.weekday, DateTime.friday);
+    });
+
+    test(
+        'échéances hebdomadaires du vendredi restent toutes des vendredis '
+        'même en traversant le passage à l\'heure d\'hiver', () {
+      // Reproduit le scénario terrain exact : cycle hebdomadaire démarré
+      // le vendredi 14 août 2026, testé jusqu'au 30 novembre (couvre le
+      // passage à l'heure d'hiver du 1er novembre). Avant correction,
+      // ce test échoue : les deux dernières échéances tombaient un
+      // jeudi (5 et 12 novembre) au lieu d'un vendredi (6 et 13).
+      final echeances = calc.echeancesPassees(
+        debutCycle: DateTime(2026, 8, 14),
+        meetingFrequency: 'hebdomadaire',
+        paymentDayOfWeek: DateTime.friday,
+        maintenant: DateTime(2026, 11, 30),
+      );
+
+      expect(
+        echeances.every((d) => d.weekday == DateTime.friday),
+        isTrue,
+        reason: 'chaque échéance doit rester un vendredi, y compris après '
+            'le passage à l\'heure d\'hiver du 1er novembre 2026',
+      );
+      expect(echeances, contains(DateTime(2026, 11, 6)));
+      expect(echeances, contains(DateTime(2026, 11, 13)));
+      expect(echeances, isNot(contains(DateTime(2026, 11, 5))));
+      expect(echeances, isNot(contains(DateTime(2026, 11, 12))));
+    });
+  });
 }

@@ -150,7 +150,10 @@ class LoanBalanceCalculator {
       return LoanBalanceResult(
         montantDuFcfa: solde > 0 ? solde.round() : 0,
         nombrePeriodesEcoulees: 1,
-        joursRestantsPeriodeCourante: finPeriode.difference(maintenant).inDays,
+        joursRestantsPeriodeCourante: joursCalendairesEntre(
+          finPeriode,
+          maintenant,
+        ),
         estAuRouge: false,
         soldeAuDebutDuRougeFcfa: null,
       );
@@ -223,7 +226,7 @@ class LoanBalanceCalculator {
     return LoanBalanceResult(
       montantDuFcfa: soldeFinal,
       nombrePeriodesEcoulees: periodes,
-      joursRestantsPeriodeCourante: finMois.difference(maintenant).inDays,
+      joursRestantsPeriodeCourante: joursCalendairesEntre(finMois, maintenant),
       estAuRouge: soldeFinal > 0,
       soldeAuDebutDuRougeFcfa: soldeFinal > 0 ? soldeDepart.round() : null,
     );
@@ -241,7 +244,10 @@ class LoanBalanceCalculator {
     int? paymentDayOfMonth1,
     int? paymentDayOfMonth2,
   }) {
-    final brut = debutPeriode.add(Duration(days: dureeJours));
+    // Jours calendaires, pas une durée en temps écoulé — voir
+    // DECISIONS.md, "Échéances décalées par le changement d'heure
+    // (DST)" (même correctif que EcheanceCalculator).
+    final brut = ajouterJoursCalendaires(debutPeriode, dureeJours);
     if (meetingFrequency == null) return brut;
 
     // echeancesPassees ramène toujours la première date au bon jour de

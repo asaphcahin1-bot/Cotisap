@@ -2627,3 +2627,109 @@ solde retombe à 0 après écriture). Appelée à chaque ouverture de
 `cotisations_exceptionnelles_screen.dart` et `cotisation_membre_screen.dart`
 — même principe que le filet de sécurité 23h des journées de
 cotisation. Sans effet sur un cycle déjà clos.
+
+## Échéances décalées par le changement d'heure (DST) (2026-08-15)
+
+**Retour terrain** : sur un groupe hebdomadaire du vendredi démarré le
+14 août 2026, le fondateur a vu apparaître dans l'historique deux
+séances datées "jeudi 5 novembre" et "jeudi 12 novembre" — jamais
+saisies manuellement, et pourtant décalées d'un jour par rapport au
+vendredi attendu.
+
+**Cause, confirmée par reproduction directe** : `_echeancesHebdomadaires`
+avançait de vendredi en vendredi avec `courante.add(Duration(days: 7))`
+— une addition de **temps écoulé réel** (7×24h), pas de jours
+calendaires. Le passage à l'heure d'hiver aux États-Unis (et dans tout
+fuseau qui observe le même changement) a lieu le **dimanche 1er
+novembre 2026** ; l'appareil de terrain n'était pas réglé sur un
+fuseau ouest-africain (qui n'a pas d'heure d'été). La semaine qui
+traverse cette transition atterrit une heure avant minuit du bon jour
+— donc la veille. Vérifié directement avec un script isolé sur une
+machine réglée sur un fuseau américain : `DateTime(2026, 10,
+30).add(Duration(days: 7))` renvoie `2026-11-05 23:00:00`, pas
+`2026-11-06 00:00:00`.
+
+**Portée** : la même construction fragile touchait aussi
+`LoanBalanceCalculator._finDePeriode` (date de fin de période de prêt)
+et deux calculs de `joursRestantsPeriodeCourante`
+(`DateTime.difference(...).inDays`, sensible au même problème dans
+l'autre sens — une différence entre deux dates calendaires correctes
+peut valoir 89 ou 91 jours au lieu de 90 si une transition tombe entre
+les deux, `.inDays` tronquant vers le bas). Deux autres occurrences
+mineures identifiées mais non corrigées ici (hors périmètre de ce
+correctif) : `AppDatabase.totalRembourseParMembreAuJour` (borne d'un
+jour, très faible risque) et `AppDatabase._debutPeriodeEnCours`
+(utilisée uniquement par `membresEnRetard`, déjà du code mort, aucun
+écran ne l'appelle).
+
+**Correction** : deux fonctions utilitaires DST-immunes dans
+`echeance_calculator.dart` (fichier pur Dart, sans dépendance à la
+base, réutilisable partout) :
+- `ajouterJoursCalendaires(date, jours)` — construit directement
+  `DateTime(year, month, day + jours)` plutôt que d'ajouter une
+  `Duration`. `DateTime` normalise un `day` hors bornes selon le
+  calendrier, jamais selon un décompte d'heures écoulées — immunisé
+  par construction.
+- `joursCalendairesEntre(plusRecente, plusAncienne)` — convertit les
+  deux dates en `DateTime.utc` avec les mêmes composants calendaires
+  avant de soustraire. UTC n'a jamais d'heure d'été, donc la
+  différence obtenue est toujours l'exact décompte de jours de
+  calendrier.
+
+`_echeancesHebdomadaires`, `LoanBalanceCalculator._finDePeriode` et les
+deux `joursRestantsPeriodeCourante` utilisent désormais ces helpers.
+`_echeancesMensuelles` n'a jamais été concernée : elle construit déjà
+chaque date directement depuis ses composants calendaires
+(`DateTime(annee, mois, jour)`), jamais par addition.
+
+**Nuance importante pour le fondateur** : la Côte d'Ivoire et l'UEMOA
+n'observent pas l'heure d'été — un agent réel là-bas ne rencontrerait
+jamais ce bug avec un téléphone correctement réglé sur son fuseau.
+Reste un vrai correctif de robustesse (téléphone mal configuré, agent
+en déplacement), pas une urgence spécifique au terrain visé.
+
+**Données de test déjà écrites (5 et 12 novembre) non réparées** :
+irrécupérables telles quelles (voir "Suppression d'`Annuler la
+clôture`" plus haut) — sans conséquence, il s'agit de données de test.
+
+**Vérifié par test de régression** avant/après correction (`git stash`
+sur les seuls fichiers du correctif) : le test échoue sur l'ancien
+code avec exactement le symptôme du terrain (5/12 novembre au lieu de
+6/13), passe après correction. Voir
+`test/domain/calculators/echeance_calculator_test.dart` et
+`loan_balance_calculator_test.dart`, groupes "changement d'heure
+(DST)".
+
+## Date de la prochaine réunion après clôture (2026-08-15)
+
+**Décision, demandée par le fondateur** : le message de confirmation
+affiché juste après la clôture d'une journée de cotisation indique
+désormais aussi la date de la prochaine réunion — plus pratique que de
+laisser l'agent la déduire lui-même.
+
+**Implémentation** : `EcheanceCalculator.prochaineEcheance({apres,
+meetingFrequency, ...})` — première échéance strictement après
+[apres], même cadence que `echeancesPassees` (fenêtre de recherche de
+40 jours, couvre le plus grand écart possible entre deux échéances
+quelle que soit la fréquence). `record_cotisation_screen.dart` l'appelle
+juste après `cloturerJourneeCotisation` et affiche un `SnackBar` :
+"Journée du [date] clôturée — prochaine réunion : [date]."
+
+## Détail par membre d'une cotisation exceptionnelle (2026-08-15)
+
+**Décision, demandée par le fondateur** : l'écran "Cotisations
+exceptionnelles" affichait déjà un total collecté et un statut
+"(dépassée)" une fois la date limite passée, mais aucun détail par
+membre — impossible de savoir en un coup d'œil qui a payé et qui a été
+prélevé automatiquement.
+
+**Implémentation** : `AppDatabase.detailCotisationExceptionnelleParMembre(evt)`
+— pour chaque membre éligible, le montant versé en cash et le montant
+déduit automatiquement (déjà suivis séparément, voir
+`estDeductionAutomatique`), d'où un statut dérivé
+(`StatutCotisationExceptionnelleMembre.paye` / `.deduitAutomatiquement`
+/ `.enAttente`, un versement partiel avant échéance restant
+`.enAttente`). Chaque événement de `cotisations_exceptionnelles_screen.dart`
+devient un `ExpansionTile` : un bandeau explicite "Cette cotisation
+exceptionnelle a expiré..." si la date limite est dépassée, puis la
+liste des membres avec leur statut et montant.

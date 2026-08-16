@@ -103,6 +103,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('figurent sur la liste définitive'), findsOneWidget);
     await tester.tap(find.text('Clôturer définitivement'));
+    await tester.pump(); // affiche le SnackBar avant qu'il ne s'auto-masque
+
+    // Message de confirmation avec la date de la prochaine réunion
+    // (demande du fondateur, voir DECISIONS.md) — cycle hebdomadaire du
+    // jeudi démarré le 4 janvier 2024, prochaine réunion le 11.
+    expect(find.textContaining('prochaine réunion : jeudi 11 janvier 2024'),
+        findsOneWidget);
+
     await tester.pumpAndSettle();
 
     // Plus rien n'est proposé pour une nouvelle cotisation tant que la

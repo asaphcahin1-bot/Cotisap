@@ -296,4 +296,25 @@ void main() {
       },
     );
   });
+
+  group('changement d\'heure (DST) — retour terrain du 2026-08-15', () {
+    test(
+        'joursRestantsPeriodeCourante reste exactement 90 même en '
+        'traversant le passage à l\'heure d\'été', () {
+      // 1er janvier 2024 -> 31 mars 2024 (90 jours calendaires plus
+      // tard) traverse le passage à l'heure d'été du 10 mars 2024 aux
+      // États-Unis. Avant correction, finPeriode.difference(maintenant)
+      // renvoyait 89 sur cette machine (une heure "perdue" par le
+      // changement d'heure, tronquée par .inDays).
+      final r = calc.calculer(
+        principalFcfa: 10000,
+        interestRatePercent: 10,
+        dureeJours: 90,
+        debut: DateTime(2024, 1, 1),
+        remboursements: [],
+        maintenant: DateTime(2024, 1, 1),
+      );
+      expect(r.joursRestantsPeriodeCourante, 90);
+    });
+  });
 }

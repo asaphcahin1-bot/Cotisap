@@ -218,6 +218,7 @@ class _CotisationsExceptionnellesScreenState
               child: Text('Aucune cotisation exceptionnelle déclarée.'),
             );
           }
+          final db = ref.read(databaseProvider);
           return ListView.separated(
             itemCount: data.length,
             separatorBuilder: (_, _) => const Divider(height: 1),
@@ -227,7 +228,18 @@ class _CotisationsExceptionnellesScreenState
               final resume = item.resume;
               final totalAttendu = resume.membresEligibles * evt.montantFcfa;
               final echue = evt.dateLimite.isBefore(AppClock.now());
-              return ListTile(
+              final solde = resume.totalCollecteFcfa >= totalAttendu;
+              return ExpansionTile(
+                leading: Icon(
+                  solde
+                      ? Icons.check_circle
+                      : (echue ? Icons.error_outline : Icons.hourglass_top),
+                  color: solde
+                      ? Colors.green
+                      : (echue
+                            ? Theme.of(context).colorScheme.error
+                            : Colors.orange),
+                ),
                 title: Text(evt.motif),
                 subtitle: Text(
                   '${formatFcfa(evt.montantFcfa)} par membre — '
@@ -237,29 +249,78 @@ class _CotisationsExceptionnellesScreenState
                   '${evt.dateLimite.day}/${evt.dateLimite.month}/${evt.dateLimite.year}'
                   '${echue ? ' (dépassée)' : ''}',
                 ),
-                isThreeLine: true,
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      resume.totalCollecteFcfa >= totalAttendu
-                          ? Icons.check_circle
-                          : (echue
-                                ? Icons.error_outline
-                                : Icons.hourglass_top),
-                      color: resume.totalCollecteFcfa >= totalAttendu
-                          ? Colors.green
-                          : (echue
-                                ? Theme.of(context).colorScheme.error
-                                : Colors.orange),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      tooltip: 'Modifier le montant ou la date limite',
-                      onPressed: () => _modifierEvenement(evt),
-                    ),
-                  ],
+                trailing: IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  tooltip: 'Modifier le montant ou la date limite',
+                  onPressed: () => _modifierEvenement(evt),
                 ),
+                children: [
+                  if (echue)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Cette cotisation exceptionnelle a expiré le '
+                        '${evt.dateLimite.day}/${evt.dateLimite.month}/${evt.dateLimite.year}. '
+                        'Le solde restant des membres n\'ayant pas payé a été '
+                        'déduit automatiquement de leur épargne.',
+                      ),
+                    ),
+                  FutureBuilder<List<DetailMembreCotisationExceptionnelle>>(
+                    future: db.detailCotisationExceptionnelleParMembre(evt),
+                    builder: (context, detailSnapshot) {
+                      if (!detailSnapshot.hasData) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final details = detailSnapshot.data!;
+                      return Column(
+                        children: details.map((d) {
+                          final statut = d.statutPour(evt.montantFcfa);
+                          final (libelle, icone, couleur) = switch (statut) {
+                            StatutCotisationExceptionnelleMembre.paye => (
+                              'Payé',
+                              Icons.check_circle_outline,
+                              Colors.green,
+                            ),
+                            StatutCotisationExceptionnelleMembre
+                                .deduitAutomatiquement =>
+                              (
+                                'Déduit automatiquement',
+                                Icons.remove_circle_outline,
+                                Theme.of(context).colorScheme.error,
+                              ),
+                            StatutCotisationExceptionnelleMembre.enAttente =>
+                              (
+                                'En attente',
+                                Icons.hourglass_empty,
+                                Colors.orange,
+                              ),
+                          };
+                          final montant = statut ==
+                                  StatutCotisationExceptionnelleMembre
+                                      .deduitAutomatiquement
+                              ? d.montantDeduitAutomatiquementFcfa
+                              : d.montantVerseFcfa;
+                          return ListTile(
+                            dense: true,
+                            leading: Icon(icone, color: couleur, size: 20),
+                            title: Text(d.membre.fullName),
+                            trailing: Text('$libelle — ${formatFcfa(montant)}'),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                ],
               );
             },
           );

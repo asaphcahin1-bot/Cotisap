@@ -1,3 +1,42 @@
+/// Ajoute [jours] jours **calendaires** à [date], jamais une addition de
+/// durée en temps écoulé — voir DECISIONS.md, "Échéances décalées par
+/// le changement d'heure (DST)". `DateTime.add(Duration(days: n))`
+/// ajoute n×24h en temps absolu ; si l'intervalle traverse un
+/// changement d'heure (l'appareil n'est pas forcément réglé sur un
+/// fuseau ouest-africain, qui n'a pas d'heure d'été), le résultat peut
+/// tomber une heure avant minuit du bon jour — donc sur la veille.
+/// Construire directement depuis les composants calendaires (`year`,
+/// `month`, `day + jours`) contourne complètement le problème :
+/// `DateTime` normalise un `day` hors bornes en changeant de mois/année
+/// selon le calendrier, jamais selon un décompte d'heures écoulées.
+DateTime ajouterJoursCalendaires(DateTime date, int jours) =>
+    DateTime(date.year, date.month, date.day + jours);
+
+/// Nombre de jours **calendaires** entre [plusRecente] et [plusAncienne]
+/// (positif si [plusRecente] est après) — jamais `DateTime.difference`
+/// directement entre deux dates locales pour ce genre de compte : cette
+/// méthode renvoie un temps écoulé réel, qui peut valoir 89 ou 91 jours
+/// pour un intervalle de calendrier de 90 jours si un changement
+/// d'heure tombe entre les deux (même défaut que l'addition, voir
+/// [ajouterJoursCalendaires]). Convertir les deux dates en UTC **avec
+/// les mêmes composants calendaires** avant de soustraire élimine le
+/// problème : UTC n'a jamais d'heure d'été, donc la différence obtenue
+/// est toujours l'exact décompte de jours de calendrier, quel que soit
+/// le fuseau réel de l'appareil.
+int joursCalendairesEntre(DateTime plusRecente, DateTime plusAncienne) {
+  final a = DateTime.utc(
+    plusRecente.year,
+    plusRecente.month,
+    plusRecente.day,
+  );
+  final b = DateTime.utc(
+    plusAncienne.year,
+    plusAncienne.month,
+    plusAncienne.day,
+  );
+  return a.difference(b).inDays;
+}
+
 /// Calcule les dates d'échéance de cotisation d'un membre — skill
 /// avec-business-rules, section "Retard de cotisation" : les
 /// cotisations tombent à date fixe (jour de paiement configuré sur le
@@ -72,6 +111,32 @@ class EcheanceCalculator {
     }
   }
 
+  /// Première date d'échéance strictement après [apres], selon la même
+  /// cadence que [echeancesPassees] — utilisé pour annoncer la date de
+  /// la prochaine réunion juste après la clôture d'une journée (voir
+  /// DECISIONS.md, "Date de la prochaine réunion après clôture").
+  /// Fenêtre de recherche large (40 jours) : couvre le plus grand écart
+  /// possible entre deux échéances (mensuelle), quelle que soit la
+  /// fréquence configurée.
+  DateTime prochaineEcheance({
+    required DateTime apres,
+    required String meetingFrequency,
+    int? paymentDayOfWeek,
+    int? paymentDayOfMonth1,
+    int? paymentDayOfMonth2,
+  }) {
+    final horizon = ajouterJoursCalendaires(apres, 40);
+    final echeances = echeancesPassees(
+      debutCycle: apres,
+      meetingFrequency: meetingFrequency,
+      paymentDayOfWeek: paymentDayOfWeek,
+      paymentDayOfMonth1: paymentDayOfMonth1,
+      paymentDayOfMonth2: paymentDayOfMonth2,
+      maintenant: horizon,
+    );
+    return echeances.firstWhere((d) => d.isAfter(_dateSeule(apres)));
+  }
+
   /// Un carnet peut recevoir entre 1 et 5 parts **par jour au total**
   /// (règle confirmée par un responsable de terrain) — pas parce qu'un
   /// membre rattrape des semaines manquées (ça n'existe plus), mais
@@ -102,12 +167,12 @@ class EcheanceCalculator {
     // paymentDayOfWeek.
     var decalage = jourSemaine - debut.weekday;
     if (decalage < 0) decalage += 7;
-    var courante = debut.add(Duration(days: decalage));
+    var courante = ajouterJoursCalendaires(debut, decalage);
 
     final resultat = <DateTime>[];
     while (!courante.isAfter(fin)) {
       resultat.add(courante);
-      courante = courante.add(const Duration(days: 7));
+      courante = ajouterJoursCalendaires(courante, 7);
     }
     return resultat;
   }

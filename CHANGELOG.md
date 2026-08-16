@@ -1,5 +1,39 @@
 # Changelog — CotisApp
 
+## 2026-08-15 — Échéances décalées par l'heure d'été, date de la prochaine réunion, détail cotisation exceptionnelle
+
+Nouveau retour terrain après plusieurs semaines de simulation : des
+séances de cotisation apparaissaient à la mauvaise date (un jour plus
+tôt) à partir de début novembre 2026. Deux autres demandes du fondateur
+dans la même conversation.
+
+**Corrigé**
+- Échéances hebdomadaires décalées d'un jour lors d'un changement
+  d'heure (heure d'été/hiver) traversé par le calcul — `_echeancesHebdomadaires`
+  utilisait une addition de temps écoulé (`Duration`) plutôt qu'une
+  addition calendaire. Même défaut dans `LoanBalanceCalculator`
+  (date de fin de période de prêt, jours restants). Deux nouveaux
+  helpers DST-immuns dans `echeance_calculator.dart` :
+  `ajouterJoursCalendaires`, `joursCalendairesEntre`. Reproduit et
+  vérifié directement sur une machine réglée sur un fuseau à heure
+  d'été (voir DECISIONS.md pour le détail complet, y compris la
+  nuance : la Côte d'Ivoire/UEMOA n'observe pas l'heure d'été).
+
+**Ajouté**
+- Message de confirmation de clôture d'une journée : affiche
+  désormais la date de la prochaine réunion
+  (`EcheanceCalculator.prochaineEcheance`)
+- Écran Cotisations exceptionnelles : chaque événement devient
+  dépliable, avec bandeau explicite si la date limite est dépassée et
+  détail par membre (payé en cash / déduit automatiquement / en
+  attente) — `AppDatabase.detailCotisationExceptionnelleParMembre`
+
+**Ajouté (tests)**
+- 4 nouveaux tests (2 échéances DST, 1 prêt DST, 1 détail cotisation
+  exceptionnelle), 2 tests existants complétés (SnackBar de clôture)
+- 309 tests au total dans le projet — `flutter analyze` : aucun
+  problème
+
 ## 2026-08-14 — Clôture bloquée par un doublon préexistant, amendes sans défaut
 
 Nouveau retour terrain : la clôture restait bloquée sur un APK déjà

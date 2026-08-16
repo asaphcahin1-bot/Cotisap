@@ -4501,6 +4501,40 @@ class AppDatabase extends _$AppDatabase {
     return (membresEligibles: eligibles, totalCollecteFcfa: totalCollecte);
   }
 
+  /// Détail par membre d'une cotisation exceptionnelle — qui a payé en
+  /// cash, qui a été déduit automatiquement à la date limite, qui n'a
+  /// encore rien fait (demande du fondateur, voir DECISIONS.md, "Détail
+  /// par membre d'une cotisation exceptionnelle"). Uniquement les
+  /// membres éligibles (déjà présents à la déclaration de l'événement).
+  Future<List<DetailMembreCotisationExceptionnelle>>
+  detailCotisationExceptionnelleParMembre(
+    CotisationsExceptionnelle evt,
+  ) async {
+    final membresGroupe = await membresDuGroupe(evt.groupId);
+    final eligibles = membresGroupe.where(
+      (m) => !m.joinedAt.isAfter(evt.createdAt),
+    );
+    final resultat = <DetailMembreCotisationExceptionnelle>[];
+    for (final membre in eligibles) {
+      final verse = await _totalVerseCashCotisationExceptionnelle(
+        cotisationExceptionnelleId: evt.id,
+        memberId: membre.id,
+      );
+      final deduit = await _totalDejaDeduitAutomatiquement(
+        cotisationExceptionnelleId: evt.id,
+        memberId: membre.id,
+      );
+      resultat.add(
+        DetailMembreCotisationExceptionnelle(
+          membre: membre,
+          montantVerseFcfa: verse,
+          montantDeduitAutomatiquementFcfa: deduit,
+        ),
+      );
+    }
+    return resultat;
+  }
+
   /// Déduit automatiquement, **immédiatement**, le solde restant de
   /// chaque membre éligible pour toute cotisation exceptionnelle de ce
   /// cycle dont la date limite est dépassée — voir RETOURS_TERRAIN.md,
@@ -4681,4 +4715,48 @@ class PretNonSolde {
   final int soldeRestantFcfa;
 
   const PretNonSolde({required this.pret, required this.soldeRestantFcfa});
+}
+
+/// Statut d'un membre éligible pour une cotisation exceptionnelle
+/// donnée — voir [DetailMembreCotisationExceptionnelle.statutPour].
+enum StatutCotisationExceptionnelleMembre {
+  /// Rien versé, ou versement partiel — la date limite n'est pas
+  /// encore dépassée.
+  enAttente,
+
+  /// Intégralement réglé en cash, aucune déduction automatique.
+  paye,
+
+  /// Une déduction automatique a eu lieu (date limite dépassée) —
+  /// éventuellement après un versement cash partiel (voir
+  /// [DetailMembreCotisationExceptionnelle.montantVerseFcfa]).
+  deduitAutomatiquement,
+}
+
+/// Détail d'un membre éligible pour une cotisation exceptionnelle — voir
+/// [AppDatabase.detailCotisationExceptionnelleParMembre].
+class DetailMembreCotisationExceptionnelle {
+  final Member membre;
+  final int montantVerseFcfa;
+  final int montantDeduitAutomatiquementFcfa;
+
+  const DetailMembreCotisationExceptionnelle({
+    required this.membre,
+    required this.montantVerseFcfa,
+    required this.montantDeduitAutomatiquementFcfa,
+  });
+
+  /// [montantAttenduFcfa] : le montant par membre de l'événement
+  /// (`CotisationsExceptionnelles.montantFcfa`) — nécessaire pour
+  /// distinguer un versement cash partiel (encore en attente) d'un
+  /// versement complet.
+  StatutCotisationExceptionnelleMembre statutPour(int montantAttenduFcfa) {
+    if (montantDeduitAutomatiquementFcfa > 0) {
+      return StatutCotisationExceptionnelleMembre.deduitAutomatiquement;
+    }
+    if (montantVerseFcfa >= montantAttenduFcfa && montantAttenduFcfa > 0) {
+      return StatutCotisationExceptionnelleMembre.paye;
+    }
+    return StatutCotisationExceptionnelleMembre.enAttente;
+  }
 }

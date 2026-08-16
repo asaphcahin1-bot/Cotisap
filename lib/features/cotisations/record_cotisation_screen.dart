@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/formatting.dart';
 import '../../data/local/database.dart';
+import '../../domain/calculators/echeance_calculator.dart';
 import '../../state/providers.dart';
 import 'amende_fonds_dialogs.dart';
 import 'cotisation_membre_screen.dart';
@@ -265,6 +266,31 @@ class _RecordCotisationScreenState
       // Sûr : le bouton n'était activable que si `tousResolus` — chaque
       // valeur est garantie non nulle ici.
       resolutions: resolutions.map((k, v) => MapEntry(k, v!)),
+    );
+    if (!mounted) return;
+
+    // Annonce la date de la prochaine réunion dans le message de
+    // confirmation — plus pratique que de laisser l'agent le déduire
+    // lui-même (demande du fondateur, voir DECISIONS.md).
+    final groupe = await (db.select(
+      db.groups,
+    )..where((g) => g.id.equals(widget.groupId))).getSingle();
+    final prochaine = const EcheanceCalculator().prochaineEcheance(
+      apres: date,
+      meetingFrequency: groupe.meetingFrequency,
+      paymentDayOfWeek: groupe.paymentDayOfWeek,
+      paymentDayOfMonth1: groupe.paymentDayOfMonth1,
+      paymentDayOfMonth2: groupe.paymentDayOfMonth2,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Journée du ${formatDateFr(date)} clôturée — prochaine réunion : '
+          '${formatDateFr(prochaine)}.',
+        ),
+        duration: const Duration(seconds: 6),
+      ),
     );
     _reload();
   }

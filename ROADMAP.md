@@ -296,6 +296,20 @@ combler avant de brancher la synchronisation réelle**, pas avant.
 
 ## Sujets ouverts, non traités par le code actuel
 
+- **"Prêt à Cotisap" (2026-08-16), en pause volontaire.** Idée du
+  fondateur : un membre en dette envers son AVEC à l'approche de la
+  clôture de cycle pourrait demander un prêt **au fondateur/à CotisApp
+  personnellement** (pas à la caisse de l'AVEC) pour régler sa dette et
+  ne pas perdre sa part au partage — remboursé automatiquement,
+  intérêt inclus, une fois le partage effectué. **Signalé au fondateur
+  avant tout code** : prêter au public avec intérêt est une activité
+  réglementée dans l'espace UEMOA (encadrement BCEAO, taux d'usure) —
+  la même prudence que celle déjà appliquée au paiement à distance
+  (voir plus bas, "Paiement à distance retiré du périmètre"). Le
+  fondateur a confirmé ne pas encore avoir vérifié ce point auprès d'un
+  professionnel — mis en pause de son côté en attendant. Aucune ligne
+  de code écrite pour cette idée. À reprendre uniquement sur demande
+  explicite du fondateur, une fois la question légale tranchée.
 - Dashboard web pour ONG/institutions (skill `avec-business-rules`
   positionnement) — après demande B2B confirmée, pas avant.
 - Dépôt de marque CotisApp / recherche d'antériorité OAPI.
