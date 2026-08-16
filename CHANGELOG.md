@@ -1,5 +1,27 @@
 # Changelog — CotisApp
 
+## 2026-08-16 (suite) — Rattrapage du miroir Postgres (Phases 2 à 5)
+
+Préparation en vue de l'authentification réelle (Twilio) et de la
+synchronisation Supabase, en parallèle. `ROADMAP.md` signalait depuis
+le 2026-08-08 un écart entre le schéma drift local et son miroir
+Postgres — vérifié colonne par colonne, l'écart couvrait en réalité
+tout le développement depuis (Phases 2 à 5, schemaVersion 22).
+
+**Ajouté**
+- `supabase/migrations/0006_rattrapage_dette_technique_phases_2_a_5.sql` :
+  toutes les colonnes et tables manquantes (motifs d'amende, carnets à
+  numéro de série, cotisations exceptionnelles, fonds de solidarité
+  obligatoire, dette de prêt au rouge, demandes de prêt collectives,
+  présence anticipée...), avec RLS pour chaque nouvelle table
+- Une colonne obsolète retirée (`echeances.carnets_engages`, vestige
+  de l'ancien modèle avant la refonte carnet/part)
+
+**Vérifié le 2026-08-16** : le fondateur a appliqué 0002 à 0006 dans
+le SQL Editor du projet Supabase existant (seul 0001 était déjà en
+place) — les 6 fichiers passent sans erreur, les 25 tables attendues
+sont bien présentes (voir DECISIONS.md pour le détail complet).
+
 ## 2026-08-16 — Historique de prêt enrichi (agent + membre)
 
 Retour terrain : un membre a demandé à voir son historique de prêt.

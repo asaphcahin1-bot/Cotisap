@@ -249,15 +249,18 @@ Voir RETOURS_TERRAIN.md, point 22. Tous **faits le 2026-08-11** :
 
 ## Dette technique — miroir Postgres en retard sur le schéma drift
 
-Constaté le 2026-08-08 en écrivant la migration `0004` :
-`carnets_engages` n'avait jamais été créée côté Postgres (ajoutée en
-drift à schemaVersion 4, jamais miroitée), et plusieurs colonnes de
-schemaVersion 4-5 manquent aussi (`groups.payment_day_of_week`/
-`payment_day_of_month1`/`2`, `cycles.loan_duration_days`,
-`amendes.est_auto_generee`/`confirmed_at`, table `amende_annulations`).
-Sans conséquence tant que la synchronisation Supabase reste inactive
-(bloquée par l'authentification Twilio, voir ci-dessous) — mais **à
-combler avant de brancher la synchronisation réelle**, pas avant.
+Constaté le 2026-08-08 en écrivant la migration `0004`, l'écart s'était
+en fait élargi jusqu'à couvrir tout Phases 2 à 5 (schemaVersion 22) —
+voir DECISIONS.md, "Rattrapage du miroir Postgres" pour le détail
+complet. **Comblé et vérifié le 2026-08-16** :
+`supabase/migrations/0006_rattrapage_dette_technique_phases_2_a_5.sql`
+appliquée par le fondateur dans le SQL Editor du projet Supabase
+existant (avec 0002 à 0005, jamais jouées avant) — les 25 tables
+attendues sont bien présentes, sans erreur. RLS pas encore re-testée
+(`supabase/tests/rls_smoke_test.sql` existe pour ça). Le miroir
+Postgres est à jour — la prochaine vraie étape reste
+l'authentification Twilio (ci-dessous), qui débloque la
+synchronisation.
 
 ## Prochaines étapes, dans l'ordre recommandé
 

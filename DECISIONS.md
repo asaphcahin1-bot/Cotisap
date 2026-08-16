@@ -2760,3 +2760,59 @@ et ajouter le détail des remboursements aux deux écrans.
   simple) sur les deux écrans : résumé toujours visible (montant, taux,
   dû actuellement, "au rouge" le cas échéant, échéance), historique des
   remboursements (date, montant) affiché au dépliage.
+
+## Rattrapage du miroir Postgres (2026-08-16)
+
+**Constat** : `ROADMAP.md` signalait depuis le 2026-08-08 que le
+schéma Postgres avait décroché du schéma drift local (schemaVersion
+4-5), sans jamais avoir été comblé malgré la mention dans 0004. En
+vérifiant colonne par colonne, l'écart s'était en fait élargi jusqu'à
+schemaVersion 22 (tout Phases 2 à 5) : `groups.payment_day_of_week` et
+consorts, `cycles.loan_duration_days`, `prets.duree_jours`,
+`amendes.est_auto_generee`/`confirmed_at`/`reviewed_at`/`carnet_numero`/
+`echeance_date`/`motif_code_systeme`, `amende_annulations`,
+`motifs_amende`, `partage_paiement_confirmations`, `carnets`,
+`amende_paiements`, `groups.montant_solidarite_obligatoire_fcfa`,
+`cotisations_exceptionnelles`,
+`fonds_solidarite_contributions.cotisation_exceptionnelle_id`/
+`est_deduction_automatique`, `groups.montant_amende_sortie_rouge_fcfa`,
+`prets.renouvele_pret_id`/`est_au_rouge_des_le_depart`,
+`pret_demandes`, `pret_demande_refus`, `prets.demande_id`,
+`presence_anticipee` — manquaient tous. Un vestige inverse a aussi été
+trouvé : `echeances.carnets_engages` (0003) n'existe plus du tout côté
+drift depuis la refonte carnet/part de schemaVersion 7 (table
+supprimée puis recréée) — colonne morte côté Postgres, retirée.
+
+**Correction** : `supabase/migrations/0006_rattrapage_dette_technique_phases_2_a_5.sql`
+— un seul fichier consolidé plutôt que 12 migrations séparées, même
+principe que 0004 pour les tables introduites en cours d'historique
+(créées directement avec leur structure actuelle). Colonnes/tables
+ajoutées en respectant l'ordre de dépendance (ex. `cotisations_exceptionnelles`
+avant la colonne qui la référence). RLS ajoutée pour chaque nouvelle
+table selon les patterns déjà établis (agent = accès complet sur son
+groupe, membre = lecture de ses propres lignes uniquement) — 4
+nouvelles fonctions d'aide (`app_group_of_amende`,
+`app_member_of_amende`, `app_group_of_demande`,
+`app_member_of_demande`), même principe que `app_group_of_pret`.
+
+**Vérifié le 2026-08-16 par exécution réelle** — écrit sans accès à
+`psql`/Docker/identifiants d'administration Supabase depuis
+l'environnement de développement (voir ENVIRONMENT.md sur la clé
+secrète, jamais utilisée), donc relu méthodiquement mais pas exécuté
+sur le moment. Le fondateur a ensuite collé 0002 à 0006 dans le SQL
+Editor du projet Supabase existant, un fichier à la fois, dans l'ordre
+— seul 0001 avait déjà été appliqué auparavant (confirmé via Table
+Editor avant de commencer : uniquement les 12 tables de 0001
+présentes). Chaque fichier est passé sans erreur (le message "Potential
+issue detected" de Supabase est apparu comme attendu sur les requêtes
+contenant `ALTER COLUMN`/`DROP` — confirmé à chaque fois, aucune perte
+de donnée possible, le projet n'ayant encore aucune vraie donnée).
+Table Editor recompte ensuite exactement les 25 tables attendues (12
+de 0001 + 13 nouvelles). RLS non re-testée à ce stade (le script
+`supabase/tests/rls_smoke_test.sql` existe pour ça, pas encore
+rejoué).
+
+**Écarté** : resynchroniser la contrainte `carnets_engages.nombre_carnets
+in (1, 2)` (0004) avec la nouvelle règle "un membre = un seul carnet"
+(drift, commentaire de classe) — laissé tel quel pour garder ce
+correctif purement additif ; à traiter séparément si besoin.
